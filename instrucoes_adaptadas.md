@@ -13,7 +13,7 @@ Você está prestes a iniciar o **Teste de Matrizes Progressivas de Raven**, uma
 
 1. **O que você verá**: Em cada tela, haverá uma figura com um padrão visual incompleto - uma parte estará faltando.
 
-2. **Sua tarefa**: Abaixo da figura incompleta, você verá **6 opções de resposta numeradas**. Apenas uma delas completa corretamente o padrão. Sua tarefa é identificar qual opção se encaixa logicamente.
+2. **Sua tarefa**: Abaixo da figura incompleta, você verá **opções de resposta numeradas** (de 6 a 8 opções, dependendo da série). Apenas uma delas completa corretamente o padrão. Sua tarefa é identificar qual opção se encaixa logicamente.
 
 3. **Exemplos**:
    - **Exemplo A1**: A figura tem um padrão de linhas. Analisando o padrão, a **opção 4** é a resposta correta.
