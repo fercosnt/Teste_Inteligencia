@@ -1,5 +1,5 @@
 # Dependencies
-/node_modules
+node_modules/
 /.pnp
 .pnp.js
 
@@ -11,7 +11,7 @@
 /out/
 
 # Production
-/build
+build/
 /dist
 
 # Misc
