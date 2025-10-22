@@ -50,19 +50,20 @@ export default function Resultado() {
 
     setResultado(dadosResultado)
 
-    // Enviar para webhook automaticamente
-    enviarResultado(dadosResultado)
+    // NÃO enviar automaticamente - apenas quando clicar no botão
   }, [router])
 
-  const enviarResultado = async (dados) => {
+  const enviarResultado = async (dados, urlTeste = false) => {
     setEnviando(true)
     setErro(null)
 
     try {
       // URL do webhook N8N
-      // Prioridade: variável de ambiente > fallback teste
-      const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL ||
-        'https://n8n.srv881294.hstgr.cloud/webhook-test/0e31d419-1337-46da-b26c-a5a6e02f5ab2'
+      // Se urlTeste = true, sempre usa webhook de teste
+      // Senão, usa variável de ambiente ou fallback de produção
+      const webhookUrl = urlTeste
+        ? 'https://n8n.srv881294.hstgr.cloud/webhook-test/0e31d419-1337-46da-b26c-a5a6e02f5ab2'
+        : (process.env.NEXT_PUBLIC_WEBHOOK_URL || 'https://n8n.srv881294.hstgr.cloud/webhook/0e31d419-1337-46da-b26c-a5a6e02f5ab2')
 
       const response = await fetch(webhookUrl, {
         method: 'POST',
@@ -83,6 +84,16 @@ export default function Resultado() {
     } finally {
       setEnviando(false)
     }
+  }
+
+  const handleTestarWebhook = () => {
+    if (!resultado) return
+    enviarResultado(resultado, true) // true = usar URL de teste
+  }
+
+  const handleEnviarProducao = () => {
+    if (!resultado) return
+    enviarResultado(resultado, false) // false = usar URL de produção
   }
 
   const handleNovoTeste = () => {
@@ -198,10 +209,10 @@ export default function Resultado() {
                 ✗ Erro ao enviar resultados: {erro}
               </p>
               <button
-                onClick={() => enviarResultado(resultado)}
+                onClick={() => enviarResultado(resultado, true)}
                 className="mt-2 text-sm underline text-red-700 hover:text-red-900"
               >
-                Tentar novamente
+                Tentar novamente (webhook teste)
               </button>
             </div>
           )}
@@ -228,6 +239,57 @@ export default function Resultado() {
           </div>
         </div>
 
+        {/* Botões de Webhook */}
+        <div className="bg-yellow-50 border-2 border-yellow-400 rounded-lg p-4 mb-6">
+          <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
+            <span className="text-2xl mr-2">🔗</span>
+            Enviar Resultados via Webhook
+          </h3>
+          <p className="text-sm text-gray-700 mb-4">
+            Escolha para onde deseja enviar os resultados do teste:
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <button
+              onClick={handleTestarWebhook}
+              disabled={enviando}
+              className="bg-orange-500 hover:bg-orange-600 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 shadow-md flex items-center justify-center"
+            >
+              {enviando ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  🧪 Testar Webhook
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleEnviarProducao}
+              disabled={enviando}
+              className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 shadow-md flex items-center justify-center"
+            >
+              {enviando ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
+                  Enviando...
+                </>
+              ) : (
+                <>
+                  🚀 Enviar para Produção
+                </>
+              )}
+            </button>
+          </div>
+
+          <p className="text-xs text-gray-600 mt-3 text-center">
+            <strong>Teste:</strong> webhook-test | <strong>Produção:</strong> webhook real
+          </p>
+        </div>
+
         {/* Botões */}
         <div className="space-y-3">
           <button
@@ -236,10 +298,6 @@ export default function Resultado() {
           >
             🔄 Realizar Novo Teste
           </button>
-
-          <p className="text-center text-sm text-gray-500">
-            Seus resultados foram salvos e enviados para {resultado.email}
-          </p>
         </div>
       </div>
     </div>
