@@ -64,7 +64,7 @@ export default function Home() {
       className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
       style={{ backgroundImage: 'url(/assets/background-gradient.png)' }}
     >
-      <Card className="w-full max-w-md shadow-2xl">
+      <Card className="w-full max-w-md shadow-2xl bg-white">
         <CardHeader className="text-center space-y-6 pt-8">
           <div className="flex justify-center">
             <Image
@@ -133,7 +133,7 @@ export default function Home() {
             <div className="pt-4">
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full text-white"
                 size="lg"
                 style={{ backgroundColor: '#00109e' }}
               >
