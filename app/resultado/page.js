@@ -59,8 +59,10 @@ export default function Resultado() {
     setErro(null)
 
     try {
-      // URL do webhook N8N (usar teste inicialmente)
-      const webhookUrl = 'https://n8n.srv881294.hstgr.cloud/webhook-test/0e31d419-1337-46da-b26c-a5a6e02f5ab2'
+      // URL do webhook N8N
+      // Prioridade: variável de ambiente > fallback teste
+      const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL ||
+        'https://n8n.srv881294.hstgr.cloud/webhook-test/0e31d419-1337-46da-b26c-a5a6e02f5ab2'
 
       const response = await fetch(webhookUrl, {
         method: 'POST',
