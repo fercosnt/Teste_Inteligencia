@@ -61,7 +61,7 @@ export default function Resultado() {
 
   // Enviar automaticamente para produção quando resultado estiver pronto
   useEffect(() => {
-    if (resultado && !enviando && !enviado && !erro) {
+    if (resultado && !enviado && !erro) {
       enviarResultado(resultado)
     }
   }, [resultado])
@@ -147,7 +147,7 @@ export default function Resultado() {
       style={{ backgroundImage: 'url(/assets/background-gradient.png)' }}
     >
       <div className="max-w-3xl mx-auto">
-        <Card className="shadow-2xl">
+        <Card className="bg-white shadow-2xl">
           <CardHeader className="bg-gradient-to-r from-blue-700 via-purple-600 to-cyan-500 text-white rounded-t-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
