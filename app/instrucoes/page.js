@@ -48,7 +48,7 @@ export default function Instrucoes() {
       style={{ backgroundImage: 'url(/assets/background-gradient.png)' }}
     >
       <div className="max-w-4xl mx-auto">
-        <Card className="shadow-2xl">
+        <Card className="shadow-2xl bg-white">
           <CardHeader className="bg-gradient-to-r from-blue-700 via-purple-600 to-cyan-500 text-white rounded-t-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -172,7 +172,7 @@ export default function Instrucoes() {
               <Button
                 onClick={handleIniciar}
                 size="lg"
-                className="w-full"
+                className="w-full text-white"
                 style={{ backgroundColor: '#00109e' }}
               >
                 Iniciar Teste
