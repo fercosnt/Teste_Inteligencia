@@ -2,12 +2,18 @@
 
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Progress } from '@/components/ui/progress'
+import { Trophy, Clock, Target, Mail, CheckCircle2, AlertCircle } from 'lucide-react'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import Image from 'next/image'
 import { calcularPontuacao, TOTAL_QUESTOES } from '@/lib/quiz-data'
 
 export default function Resultado() {
   const router = useRouter()
   const [resultado, setResultado] = useState(null)
-  const [enviando, setEnviando] = useState(false)
+  const [enviando, setEnviando] = useState(true)
   const [enviado, setEnviado] = useState(false)
   const [erro, setErro] = useState(null)
 
@@ -34,6 +40,7 @@ export default function Resultado() {
     const inicio = new Date(dataInicio)
     const fim = new Date(dataFim)
     const tempoTotalMs = fim - inicio
+    const tempoTotalSegundos = Math.floor(tempoTotalMs / 1000)
     const tempoTotalMinutos = (tempoTotalMs / 1000 / 60).toFixed(2)
 
     const dadosResultado = {
@@ -43,6 +50,7 @@ export default function Resultado() {
       dataInicio,
       dataFim,
       tempoTotalMinutos: parseFloat(tempoTotalMinutos),
+      tempoTotalSegundos,
       pontuacao,
       percentualAcertos: parseFloat(percentual),
       respostas
@@ -86,7 +94,7 @@ export default function Resultado() {
         console.error('❌ Erro do servidor:', errorText)
 
         if (response.status === 404) {
-          throw new Error(`❌ Webhook não encontrado (404)\n\n✅ Verifique no N8N:\n1. Workflow está ATIVO?\n2. URL está correta?\n3. Endpoint correto (/webhook-test/ ou /webhook/)?`)
+          throw new Error(`❌ Webhook não encontrado (404)\n\n✅ Verifique no N8N:\n1. Workflow está ATIVO?\n2. URL está correta?\n3. Endpoint correto?`)
         }
 
         throw new Error(`Erro ${response.status}: ${errorText || 'Verifique se o webhook está ativo no N8N'}`)
@@ -104,27 +112,26 @@ export default function Resultado() {
     }
   }
 
-  const handleNovoTeste = () => {
-    // Limpar localStorage
-    localStorage.removeItem('candidato')
-    localStorage.removeItem('respostas')
-    localStorage.removeItem('dataInicio')
-    localStorage.removeItem('dataFim')
-
-    // Redirecionar para página inicial
-    router.push('/')
+  const formatarTempo = (segundos) => {
+    const horas = Math.floor(segundos / 3600)
+    const minutos = Math.floor((segundos % 3600) / 60)
+    const segs = segundos % 60
+    return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segs).padStart(2, '0')}`
   }
 
-  const formatarTempo = (minutos) => {
-    const mins = Math.floor(minutos)
-    const segs = Math.round((minutos - mins) * 60)
-    return `${mins} min ${segs} seg`
+  const getNivelDesempenho = (percentual) => {
+    const perc = parseFloat(percentual)
+    if (perc >= 90) return { texto: 'Excelente', cor: 'text-green-600', bg: 'bg-green-50' }
+    if (perc >= 75) return { texto: 'Muito Bom', cor: 'text-cyan-600', bg: 'bg-cyan-50' }
+    if (perc >= 60) return { texto: 'Bom', cor: 'text-purple-600', bg: 'bg-purple-50' }
+    if (perc >= 50) return { texto: 'Regular', cor: 'text-amber-600', bg: 'bg-amber-50' }
+    return { texto: 'Precisa Melhorar', cor: 'text-red-600', bg: 'bg-red-50' }
   }
 
   if (!resultado) {
     return (
-      <div className="quiz-container">
-        <div className="quiz-card text-center">
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Calculando resultado...</p>
         </div>
@@ -132,129 +139,147 @@ export default function Resultado() {
     )
   }
 
-  const acertosPercentual = resultado.percentualAcertos
-  const desempenho =
-    acertosPercentual >= 80 ? { nivel: 'Excelente', cor: 'green', emoji: '🏆' } :
-    acertosPercentual >= 60 ? { nivel: 'Bom', cor: 'blue', emoji: '👍' } :
-    acertosPercentual >= 40 ? { nivel: 'Regular', cor: 'yellow', emoji: '📊' } :
-    { nivel: 'Necessita Melhorar', cor: 'orange', emoji: '💪' }
+  const nivel = getNivelDesempenho(resultado.percentualAcertos)
 
   return (
-    <div className="quiz-container bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="quiz-card max-w-3xl">
-        <div className="text-center mb-8">
-          <div className="text-6xl mb-4">{desempenho.emoji}</div>
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            Teste Concluído!
-          </h1>
-          <p className="text-lg text-gray-600">
-            Parabéns, {resultado.nome}!
-          </p>
-        </div>
-
-        {/* Resultado Principal */}
-        <div className={`bg-${desempenho.cor}-50 border-2 border-${desempenho.cor}-500 rounded-lg p-6 mb-6`}>
-          <div className="text-center">
-            <p className="text-sm font-medium text-gray-600 mb-2">Sua Pontuação</p>
-            <div className="text-6xl font-bold text-gray-800 mb-2">
-              {resultado.pontuacao}/{TOTAL_QUESTOES}
+    <div
+      className="min-h-screen p-4 py-8 bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: 'url(/assets/background-gradient.png)' }}
+    >
+      <div className="max-w-3xl mx-auto">
+        <Card className="shadow-2xl">
+          <CardHeader className="bg-gradient-to-r from-blue-700 via-purple-600 to-cyan-500 text-white rounded-t-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Trophy className="w-10 h-10" />
+                <div>
+                  <CardTitle className="text-2xl">Teste Finalizado!</CardTitle>
+                  <p className="text-white/90 mt-1">
+                    Parabéns, {resultado.nome}!
+                  </p>
+                </div>
+              </div>
+              <Image
+                src="/assets/logo-marca.png"
+                alt="Beauty Smile"
+                width={40}
+                height={40}
+                className="h-10 w-auto"
+              />
             </div>
-            <div className="text-3xl font-semibold" style={{ color: `var(--tw-${desempenho.cor}-600)` }}>
-              {resultado.percentualAcertos}%
-            </div>
-            <p className="text-lg font-medium text-gray-700 mt-3">
-              Desempenho: {desempenho.nivel}
-            </p>
-          </div>
-        </div>
+          </CardHeader>
 
-        {/* Detalhes */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="bg-white rounded-lg p-4 border border-gray-200">
-            <p className="text-sm text-gray-600 mb-1">Tempo Total</p>
-            <p className="text-2xl font-bold text-gray-800">
-              {formatarTempo(resultado.tempoTotalMinutos)}
-            </p>
-          </div>
+          <CardContent className="p-6 space-y-6">
+            {/* Status de Envio */}
+            {enviando && (
+              <Alert className="border-cyan-200 bg-cyan-50">
+                <div className="flex items-center gap-3">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-cyan-600"></div>
+                  <AlertDescription className="text-gray-700">
+                    Processando seus resultados...
+                  </AlertDescription>
+                </div>
+              </Alert>
+            )}
 
-          <div className="bg-white rounded-lg p-4 border border-gray-200">
-            <p className="text-sm text-gray-600 mb-1">Questões Corretas</p>
-            <p className="text-2xl font-bold text-gray-800">
-              {resultado.pontuacao} acertos
-            </p>
-          </div>
+            {enviado && (
+              <Alert className="border-green-200 bg-green-50">
+                <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <AlertDescription className="text-gray-700">
+                  <strong className="text-green-700">Sucesso!</strong> Seus resultados foram enviados por email.
+                </AlertDescription>
+              </Alert>
+            )}
 
-          <div className="bg-white rounded-lg p-4 border border-gray-200 md:col-span-2">
-            <p className="text-sm text-gray-600 mb-1">Email de Confirmação</p>
-            <p className="text-lg font-medium text-gray-800">
-              {resultado.email}
-            </p>
-          </div>
-        </div>
+            {erro && (
+              <Alert className="border-red-200 bg-red-50">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+                <AlertDescription className="text-gray-700">
+                  <strong className="text-red-700">Erro ao enviar.</strong> {erro}
+                  <button
+                    onClick={() => enviarResultado(resultado)}
+                    className="mt-2 text-sm underline text-red-700 hover:text-red-900 block"
+                  >
+                    Tentar novamente
+                  </button>
+                </AlertDescription>
+              </Alert>
+            )}
 
-        {/* Status de Envio */}
-        <div className="mb-6">
-          {enviando && (
-            <div className="bg-blue-50 border-l-4 border-blue-500 p-4">
-              <div className="flex items-center">
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
-                <p className="text-blue-800">Enviando resultados...</p>
+            {/* Resultado Principal */}
+            <div className="text-center py-6">
+              <div className={`inline-flex items-center gap-2 px-6 py-3 rounded-full ${nivel.bg} mb-4`}>
+                <Trophy className={`w-6 h-6 ${nivel.cor}`} />
+                <span className={`${nivel.cor} font-semibold`}>{nivel.texto}</span>
+              </div>
+
+              <div className="space-y-2">
+                <div>
+                  <div className="text-6xl font-bold mb-2">{resultado.pontuacao}</div>
+                  <div className="text-gray-600">de {TOTAL_QUESTOES} questões corretas</div>
+                </div>
+
+                <div className="mt-4">
+                  <Progress value={parseFloat(resultado.percentualAcertos)} className="h-3 max-w-md mx-auto" />
+                  <p className="text-2xl text-cyan-600 mt-2 font-semibold">{resultado.percentualAcertos}%</p>
+                </div>
               </div>
             </div>
-          )}
 
-          {enviado && !enviando && (
-            <div className="bg-green-50 border-l-4 border-green-500 p-4">
-              <p className="text-green-800">
-                ✓ Resultados enviados automaticamente! Você receberá um email em breve.
-              </p>
+            {/* Estatísticas */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Card className="bg-cyan-50 border-cyan-200">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Clock className="w-6 h-6 text-cyan-600 mt-1" />
+                    <div>
+                      <p className="text-sm text-gray-600">Tempo Total</p>
+                      <p className="text-xl font-semibold tabular-nums">{formatarTempo(resultado.tempoTotalSegundos)}</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {Math.round(resultado.tempoTotalMinutos)} minutos
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-purple-50 border-purple-200">
+                <CardContent className="p-4">
+                  <div className="flex items-start gap-3">
+                    <Target className="w-6 h-6 text-purple-600 mt-1" />
+                    <div>
+                      <p className="text-sm text-gray-600">Taxa de Acerto</p>
+                      <p className="text-xl font-semibold">{resultado.percentualAcertos}%</p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {resultado.pontuacao} de {TOTAL_QUESTOES} corretas
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          )}
 
-          {erro && !enviando && (
-            <div className="bg-red-50 border-l-4 border-red-500 p-4">
-              <p className="text-red-800">
-                ✗ Erro ao enviar resultados: {erro}
-              </p>
-              <button
-                onClick={() => enviarResultado(resultado)}
-                className="mt-2 text-sm underline text-red-700 hover:text-red-900"
-              >
-                Tentar novamente
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Breakdown por Série */}
-        <div className="bg-gray-50 rounded-lg p-4 mb-6">
-          <h3 className="font-semibold text-gray-800 mb-3">Desempenho por Série</h3>
-          <div className="space-y-2">
-            {['A', 'B', 'C', 'D', 'E'].map((serie, idx) => {
-              const inicio = idx * 12
-              const fim = inicio + 12
-              const respostasSerie = resultado.respostas.slice(inicio, fim)
-
-              // Calcular acertos da série (precisa importar gabarito)
-              // Por simplicidade, vou mostrar apenas estrutura
-              return (
-                <div key={serie} className="flex items-center justify-between py-2 border-b border-gray-200">
-                  <span className="font-medium text-gray-700">Série {serie}</span>
-                  <span className="text-gray-600">Questões {inicio + 1}-{fim}</span>
+            {/* Informações Adicionais */}
+            <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Mail className="w-5 h-5 text-amber-600 mt-0.5" />
+                <div className="text-sm text-gray-700">
+                  <p className="mb-2">
+                    <strong>Próximos Passos:</strong>
+                  </p>
+                  <ul className="space-y-1 list-disc list-inside">
+                    <li>Você receberá um email com os resultados detalhados</li>
+                    <li>O relatório completo será enviado para a equipe de RH</li>
+                    <li>Aguarde o contato da equipe de recrutamento</li>
+                  </ul>
                 </div>
-              )
-            })}
-          </div>
-        </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
-        {/* Botões */}
-        <div className="space-y-3">
-          <button
-            onClick={handleNovoTeste}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-lg transition duration-200 transform hover:scale-105 shadow-lg"
-          >
-            🔄 Realizar Novo Teste
-          </button>
+        <div className="mt-6 text-center text-sm text-white bg-black/30 backdrop-blur-sm inline-block px-4 py-2 rounded-lg mx-auto block w-fit">
+          <p>Obrigado por participar do processo seletivo!</p>
         </div>
       </div>
     </div>
