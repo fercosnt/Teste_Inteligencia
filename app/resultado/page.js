@@ -74,14 +74,20 @@ export default function Resultado() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(dados),
+        mode: 'cors',
       })
 
       console.log('📡 Response status:', response.status)
       console.log('📡 Response ok:', response.ok)
 
       if (!response.ok) {
-        const errorText = await response.text()
+        const errorText = await response.text().catch(() => '')
         console.error('❌ Erro do servidor:', errorText)
+
+        if (response.status === 404) {
+          throw new Error(`❌ Webhook não encontrado (404)\n\n✅ Verifique no N8N:\n1. Workflow está ATIVO?\n2. URL está correta?\n3. Endpoint correto (/webhook-test/ ou /webhook/)?`)
+        }
+
         throw new Error(`Erro ${response.status}: ${errorText || 'Verifique se o webhook está ativo no N8N'}`)
       }
 
