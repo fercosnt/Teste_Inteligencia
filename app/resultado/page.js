@@ -65,6 +65,9 @@ export default function Resultado() {
         ? 'https://n8n.srv881294.hstgr.cloud/webhook-test/0e31d419-1337-46da-b26c-a5a6e02f5ab2'
         : (process.env.NEXT_PUBLIC_WEBHOOK_URL || 'https://n8n.srv881294.hstgr.cloud/webhook/0e31d419-1337-46da-b26c-a5a6e02f5ab2')
 
+      console.log('🔗 Enviando para webhook:', webhookUrl)
+      console.log('📦 Dados:', JSON.stringify(dados, null, 2))
+
       const response = await fetch(webhookUrl, {
         method: 'POST',
         headers: {
@@ -73,13 +76,21 @@ export default function Resultado() {
         body: JSON.stringify(dados),
       })
 
+      console.log('📡 Response status:', response.status)
+      console.log('📡 Response ok:', response.ok)
+
       if (!response.ok) {
-        throw new Error(`Erro ao enviar dados: ${response.status}`)
+        const errorText = await response.text()
+        console.error('❌ Erro do servidor:', errorText)
+        throw new Error(`Erro ${response.status}: ${errorText || 'Verifique se o webhook está ativo no N8N'}`)
       }
+
+      const responseData = await response.json().catch(() => ({}))
+      console.log('✅ Resposta:', responseData)
 
       setEnviado(true)
     } catch (error) {
-      console.error('Erro ao enviar resultado:', error)
+      console.error('❌ Erro completo:', error)
       setErro(error.message)
     } finally {
       setEnviando(false)
