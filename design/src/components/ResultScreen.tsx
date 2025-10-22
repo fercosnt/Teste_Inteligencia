@@ -62,7 +62,7 @@ export function ResultScreen({
       style={{ backgroundImage: `url(${backgroundGradient})` }}
     >
       <div className="max-w-3xl mx-auto">
-        <Card className="shadow-2xl">
+        <Card className="bg-white shadow-2xl">
           <CardHeader className="bg-gradient-to-r from-blue-700 via-purple-600 to-cyan-500 text-white rounded-t-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
