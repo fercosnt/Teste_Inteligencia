@@ -101,7 +101,7 @@ export default function Questao() {
     >
       <div className="max-w-5xl mx-auto">
         {/* Header fixo */}
-        <Card className="shadow-lg mb-6">
+        <Card className="bg-white shadow-lg mb-6">
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -127,7 +127,7 @@ export default function Questao() {
             </div>
 
             <div className="mt-4">
-              <Progress value={progresso} className="h-2" />
+              <Progress value={progresso} className="h-2 bg-gray-200" />
               <p className="text-sm text-gray-500 mt-1 text-center">
                 {Math.round(progresso)}% concluído
               </p>
@@ -136,7 +136,7 @@ export default function Questao() {
         </Card>
 
         {/* Questão */}
-        <Card className="shadow-xl">
+        <Card className="bg-white shadow-xl">
           <CardContent className="p-6 sm:p-8">
             {/* Imagem da Matriz */}
             <div className="mb-8">
@@ -177,7 +177,7 @@ export default function Questao() {
                     `}
                   >
                     <div className="flex flex-col items-center justify-center gap-2">
-                      <span className="text-2xl font-semibold">{opcao}</span>
+                      <span className="text-2xl text-gray-900 font-semibold">{opcao}</span>
                       {respostaSelecionada === opcao && (
                         <CheckCircle className="w-5 h-5 text-cyan-600 absolute top-2 right-2" />
                       )}
