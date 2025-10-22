@@ -2,74 +2,34 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import Image from 'next/image'
 
 export default function Home() {
   const router = useRouter()
-  const [formData, setFormData] = useState({
-    nome: '',
-    email: '',
-    telefone: ''
-  })
+  const [nome, setNome] = useState('')
+  const [email, setEmail] = useState('')
+  const [telefone, setTelefone] = useState('')
   const [errors, setErrors] = useState({})
-
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }))
-    // Limpar erro do campo quando usuário digita
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }))
-    }
-  }
-
-  const formatTelefone = (value) => {
-    // Remove tudo que não é dígito
-    const numbers = value.replace(/\D/g, '')
-    // Formata (XX) XXXXX-XXXX
-    if (numbers.length <= 11) {
-      return numbers
-        .replace(/(\d{2})(\d)/, '($1) $2')
-        .replace(/(\d{5})(\d)/, '$1-$2')
-    }
-    return value
-  }
-
-  const handleTelefoneChange = (e) => {
-    const formatted = formatTelefone(e.target.value)
-    setFormData(prev => ({
-      ...prev,
-      telefone: formatted
-    }))
-    if (errors.telefone) {
-      setErrors(prev => ({
-        ...prev,
-        telefone: ''
-      }))
-    }
-  }
 
   const validateForm = () => {
     const newErrors = {}
 
-    if (!formData.nome.trim()) {
-      newErrors.nome = 'Por favor, informe seu nome'
+    if (!nome.trim()) {
+      newErrors.nome = 'Nome é obrigatório'
     }
 
-    if (!formData.email.trim()) {
-      newErrors.email = 'Por favor, informe seu email'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Por favor, informe um email válido'
+    if (!email.trim()) {
+      newErrors.email = 'Email é obrigatório'
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      newErrors.email = 'Email inválido'
     }
 
-    if (!formData.telefone.trim()) {
-      newErrors.telefone = 'Por favor, informe seu telefone'
-    } else if (formData.telefone.replace(/\D/g, '').length < 10) {
-      newErrors.telefone = 'Por favor, informe um telefone válido'
+    if (!telefone.trim()) {
+      newErrors.telefone = 'Telefone é obrigatório'
     }
 
     setErrors(newErrors)
@@ -81,105 +41,121 @@ export default function Home() {
 
     if (validateForm()) {
       // Armazenar dados no localStorage
-      localStorage.setItem('candidato', JSON.stringify(formData))
+      localStorage.setItem('candidato', JSON.stringify({ nome, email, telefone }))
       // Redirecionar para instruções
       router.push('/instrucoes')
     }
   }
 
+  const formatTelefone = (value) => {
+    // Remove tudo que não é número
+    const numbers = value.replace(/\D/g, '')
+
+    // Formata (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+    if (numbers.length <= 10) {
+      return numbers.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3')
+    } else {
+      return numbers.replace(/(\d{2})(\d{5})(\d{0,4})/, '($1) $2-$3')
+    }
+  }
+
   return (
-    <div className="quiz-container bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="quiz-card">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-3">
-            Teste de Raciocínio Lógico
-          </h1>
-          <p className="text-lg text-gray-600">
-            Matrizes Progressivas de Raven
-          </p>
-        </div>
-
-        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
-          <p className="text-sm text-blue-800">
-            <strong>Antes de começar,</strong> por favor preencha seus dados abaixo.
-            Você receberá os resultados do teste por email ao finalizar.
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <label htmlFor="nome" className="block text-sm font-medium text-gray-700 mb-2">
-              Nome Completo *
-            </label>
-            <input
-              type="text"
-              id="nome"
-              name="nome"
-              value={formData.nome}
-              onChange={handleChange}
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
-                errors.nome ? 'border-red-500' : 'border-gray-300'
-              }`}
-              placeholder="Digite seu nome completo"
+    <div
+      className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: 'url(/assets/background-gradient.png)' }}
+    >
+      <Card className="w-full max-w-md shadow-2xl">
+        <CardHeader className="text-center space-y-6 pt-8">
+          <div className="flex justify-center">
+            <Image
+              src="/assets/logo-small.png"
+              alt="Beauty Smile"
+              width={80}
+              height={80}
+              className="h-20 w-auto"
             />
-            {errors.nome && (
-              <p className="text-red-500 text-sm mt-1">{errors.nome}</p>
-            )}
           </div>
-
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email *
-            </label>
-            <input
-              type="email"
-              id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
-                errors.email ? 'border-red-500' : 'border-gray-300'
-              }`}
-              placeholder="seu@email.com"
-            />
-            {errors.email && (
-              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
-            )}
+            <CardTitle className="text-2xl">Teste de Matrizes Progressivas</CardTitle>
+            <CardDescription className="mt-2">
+              Avaliação de Raciocínio Lógico
+            </CardDescription>
           </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="nome">Nome Completo *</Label>
+              <Input
+                id="nome"
+                type="text"
+                placeholder="Digite seu nome completo"
+                value={nome}
+                onChange={(e) => setNome(e.target.value)}
+                className={errors.nome ? 'border-red-500' : ''}
+              />
+              {errors.nome && (
+                <p className="text-red-500 text-sm">{errors.nome}</p>
+              )}
+            </div>
 
-          <div>
-            <label htmlFor="telefone" className="block text-sm font-medium text-gray-700 mb-2">
-              Telefone *
-            </label>
-            <input
-              type="tel"
-              id="telefone"
-              name="telefone"
-              value={formData.telefone}
-              onChange={handleTelefoneChange}
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition ${
-                errors.telefone ? 'border-red-500' : 'border-gray-300'
-              }`}
-              placeholder="(00) 00000-0000"
-              maxLength="15"
-            />
-            {errors.telefone && (
-              <p className="text-red-500 text-sm mt-1">{errors.telefone}</p>
-            )}
+            <div className="space-y-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="seu.email@exemplo.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={errors.email ? 'border-red-500' : ''}
+              />
+              {errors.email && (
+                <p className="text-red-500 text-sm">{errors.email}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="telefone">Telefone *</Label>
+              <Input
+                id="telefone"
+                type="tel"
+                placeholder="(11) 98765-4321"
+                value={telefone}
+                onChange={(e) => setTelefone(formatTelefone(e.target.value))}
+                className={errors.telefone ? 'border-red-500' : ''}
+                maxLength={15}
+              />
+              {errors.telefone && (
+                <p className="text-red-500 text-sm">{errors.telefone}</p>
+              )}
+            </div>
+
+            <div className="pt-4">
+              <Button
+                type="submit"
+                className="w-full"
+                size="lg"
+                style={{ backgroundColor: '#00109e' }}
+              >
+                Próximo
+              </Button>
+            </div>
+          </form>
+
+          <div className="mt-6 p-4 bg-cyan-50 rounded-lg border border-cyan-200">
+            <p className="text-sm text-gray-700">
+              <strong>Informações:</strong>
+              <br />
+              • Total: 60 questões divididas em 5 séries
+              <br />
+              • Tempo: Cronometrado (sem limite)
+              <br />
+              • Navegação: Não é possível voltar
+              <br />• Resultado enviado por email
+            </p>
           </div>
-
-          <button
-            type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-6 rounded-lg transition duration-200 transform hover:scale-105 shadow-lg"
-          >
-            Próximo →
-          </button>
-        </form>
-
-        <p className="text-center text-sm text-gray-500 mt-6">
-          * Campos obrigatórios
-        </p>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
