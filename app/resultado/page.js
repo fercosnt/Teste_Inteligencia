@@ -59,11 +59,9 @@ export default function Resultado() {
 
     try {
       // URL do webhook N8N
-      // Se urlTeste = true, sempre usa webhook de teste
-      // Senão, usa variável de ambiente ou fallback de produção
-      const webhookUrl = urlTeste
-        ? 'https://n8n.srv881294.hstgr.cloud/webhook-test/0e31d419-1337-46da-b26c-a5a6e02f5ab2'
-        : (process.env.NEXT_PUBLIC_WEBHOOK_URL || 'https://n8n.srv881294.hstgr.cloud/webhook/0e31d419-1337-46da-b26c-a5a6e02f5ab2')
+      // Usando webhook-test em ambos os casos pois permite CORS
+      // Se quiser usar webhook de produção, configure CORS no N8N
+      const webhookUrl = 'https://n8n.srv881294.hstgr.cloud/webhook-test/0e31d419-1337-46da-b26c-a5a6e02f5ab2'
 
       console.log('🔗 Enviando para webhook:', webhookUrl)
       console.log('📦 Dados:', JSON.stringify(dados, null, 2))
