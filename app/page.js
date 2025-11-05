@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import Image from 'next/image'
+import { FileText } from 'lucide-react'
 
 export default function Home() {
   const router = useRouter()
@@ -40,10 +41,15 @@ export default function Home() {
     e.preventDefault()
 
     if (validateForm()) {
-      // Armazenar dados no localStorage
-      localStorage.setItem('candidato', JSON.stringify({ nome, email, telefone }))
-      // Redirecionar para instruções
-      router.push('/instrucoes')
+      try {
+        // Armazenar dados no localStorage com tratamento de erro
+        localStorage.setItem('candidato', JSON.stringify({ nome, email, telefone }))
+        // Redirecionar para instruções
+        router.push('/instrucoes')
+      } catch (error) {
+        console.error('Erro ao salvar dados no localStorage:', error)
+        alert('Erro ao salvar dados. Por favor, verifique as configurações do navegador.')
+      }
     }
   }
 
@@ -65,15 +71,25 @@ export default function Home() {
       style={{ backgroundImage: 'url(/assets/background-gradient.png)' }}
     >
       <Card className="w-full max-w-md shadow-2xl">
-        <CardHeader className="text-center space-y-6 pt-8">
-          <div className="flex justify-center">
+        <CardHeader className="text-center space-y-6 pt-8 relative">
+          <Button
+            onClick={() => router.push('/relatorios')}
+            variant="outline"
+            className="absolute top-4 right-4 flex items-center gap-2 border-2 hover:bg-blue-50 hover:border-blue-300 transition-all duration-200 shadow-sm hover:shadow-md"
+            size="sm"
+          >
+            <FileText className="h-4 w-4 text-blue-600" />
+            <span className="font-medium text-blue-700">Relatórios</span>
+          </Button>
+          <div className="flex justify-center flex-col items-center">
             <Image
-              src="/assets/logo-small.png"
+              src="/assets/tochinha.png"
               alt="Beauty Smile"
               width={80}
               height={80}
               className="h-20 w-auto"
             />
+            <p className="mt-2 text-sm font-medium text-gray-700">Ferramentas da Inteligência</p>
           </div>
           <div>
             <CardTitle className="text-2xl">Teste de Matrizes Progressivas</CardTitle>
@@ -135,7 +151,7 @@ export default function Home() {
                 type="submit"
                 className="w-full"
                 size="lg"
-                style={{ backgroundColor: '#00109e' }}
+                style={{ backgroundColor: '#00109e', color: 'white' }}
               >
                 Próximo
               </Button>

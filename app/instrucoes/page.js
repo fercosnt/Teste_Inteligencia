@@ -13,25 +13,35 @@ export default function Instrucoes() {
   const [candidato, setCandidato] = useState(null)
 
   useEffect(() => {
-    // Verificar se há dados do candidato
-    const dadosCandidato = localStorage.getItem('candidato')
-    if (!dadosCandidato) {
+    try {
+      // Verificar se há dados do candidato com tratamento de erro
+      const dadosCandidato = localStorage.getItem('candidato')
+      if (!dadosCandidato) {
+        router.push('/')
+        return
+      }
+      setCandidato(JSON.parse(dadosCandidato))
+    } catch (error) {
+      console.error('Erro ao acessar localStorage:', error)
       router.push('/')
-      return
     }
-    setCandidato(JSON.parse(dadosCandidato))
   }, [router])
 
   const handleIniciar = () => {
-    // Iniciar cronômetro
-    const dataInicio = new Date().toISOString()
-    localStorage.setItem('dataInicio', dataInicio)
+    try {
+      // Iniciar cronômetro
+      const dataInicio = new Date().toISOString()
+      localStorage.setItem('dataInicio', dataInicio)
 
-    // Inicializar array de respostas
-    localStorage.setItem('respostas', JSON.stringify([]))
+      // Inicializar array de respostas
+      localStorage.setItem('respostas', JSON.stringify([]))
 
-    // Ir para primeira questão
-    router.push('/quiz/1')
+      // Ir para primeira questão
+      router.push('/quiz/1')
+    } catch (error) {
+      console.error('Erro ao inicializar teste:', error)
+      alert('Erro ao iniciar o teste. Por favor, verifique as configurações do navegador.')
+    }
   }
 
   if (!candidato) {
@@ -61,11 +71,11 @@ export default function Instrucoes() {
                 </div>
               </div>
               <Image
-                src="/assets/logo-marca.png"
+                src="/assets/tochinha p fundo escuro.png"
                 alt="Beauty Smile"
-                width={40}
-                height={40}
-                className="h-10 w-auto"
+                width={56}
+                height={56}
+                className="h-14 w-auto"
               />
             </div>
           </CardHeader>
@@ -173,7 +183,7 @@ export default function Instrucoes() {
                 onClick={handleIniciar}
                 size="lg"
                 className="w-full"
-                style={{ backgroundColor: '#00109e' }}
+                style={{ backgroundColor: '#00109e', color: 'white' }}
               >
                 Iniciar Teste
                 <ArrowRight className="w-5 h-5 ml-2" />

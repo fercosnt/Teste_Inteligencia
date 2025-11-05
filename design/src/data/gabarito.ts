@@ -49,7 +49,7 @@ export const questoes: Questao[] = Array.from({ length: 60 }, (_, index) => {
     serie,
     numero,
     numeroGlobal,
-    imagemUrl: `/images/serie-${serie.toLowerCase()}/questao-${numero}.png`,
+    imagemUrl: `/images/Mascara/A${numeroGlobal}.webp`,
     opcoes: Array.from({ length: numeroOpcoes }, (_, i) => i + 1),
     respostaCorreta: respostasCorretas[index]
   };

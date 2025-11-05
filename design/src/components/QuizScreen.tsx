@@ -83,12 +83,15 @@ export function QuizScreen({
             {/* Imagem da Matriz */}
             <div className="mb-8">
               <div className="bg-white border-2 border-gray-200 rounded-lg p-6 flex items-center justify-center">
-                <div className="w-full max-w-2xl aspect-square bg-gray-100 rounded-lg flex items-center justify-center">
-                  <ImageWithFallback
-                    src={questao.imagemUrl}
-                    alt={`Questão ${questao.numeroGlobal} - Série ${questao.serie}`}
-                    className="max-w-full max-h-full object-contain"
-                  />
+                <div className="w-full max-w-2xl aspect-square bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                  <div className="relative w-full h-full overflow-hidden">
+                    <ImageWithFallback
+                      src={questao.imagemUrl}
+                      alt={`Questão ${questao.numeroGlobal} - Série ${questao.serie}`}
+                      className="w-full h-full object-cover"
+                      style={{ transform: 'scale(1.4)' }}
+                    />
+                  </div>
                 </div>
               </div>
               <p className="text-center text-gray-600 mt-4">
@@ -105,8 +108,9 @@ export function QuizScreen({
                     key={opcao}
                     onClick={() => onSelectResposta(opcao)}
                     className={`
-                      relative p-6 rounded-lg border-2 transition-all
-                      hover:scale-105 hover:shadow-lg
+                      relative rounded-lg border-2 transition-all
+                      hover:scale-105 hover:shadow-lg aspect-square
+                      flex items-center justify-center overflow-hidden
                       ${
                         respostaSelecionada === opcao
                           ? 'border-cyan-600 bg-cyan-50 shadow-md'
@@ -114,10 +118,15 @@ export function QuizScreen({
                       }
                     `}
                   >
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <span className="text-2xl">{opcao}</span>
+                    <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+                      <ImageWithFallback
+                        src={`/images/Mascara/A${questao.numeroGlobal}.${opcao}.webp`}
+                        alt={`Opção ${opcao}`}
+                        className="w-full h-full object-cover"
+                        style={{ transform: 'scale(3.0)' }}
+                      />
                       {respostaSelecionada === opcao && (
-                        <CheckCircle className="w-5 h-5 text-cyan-600 absolute top-2 right-2" />
+                        <CheckCircle className="w-5 h-5 text-cyan-600 absolute top-1 right-1 bg-white rounded-full z-10" />
                       )}
                     </div>
                   </button>
@@ -133,7 +142,8 @@ export function QuizScreen({
                 size="lg"
                 className="w-full sm:w-auto px-12"
                 style={{ 
-                  backgroundColor: respostaSelecionada === null ? undefined : '#00109e'
+                  backgroundColor: respostaSelecionada === null ? undefined : '#00109e',
+                  color: respostaSelecionada === null ? undefined : 'white'
                 }}
               >
                 {questaoAtual === totalQuestoes ? 'Finalizar Teste' : 'Próxima Questão'}

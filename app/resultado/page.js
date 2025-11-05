@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
@@ -10,72 +10,58 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import Image from 'next/image'
 import { calcularPontuacao, TOTAL_QUESTOES } from '@/lib/quiz-data'
 
+// Helper para logging condicional (apenas em desenvolvimento)
+const isDev = process.env.NODE_ENV === 'development'
+const log = (...args) => {
+  if (isDev) {
+    console.log(...args)
+  }
+}
+const logError = (...args) => {
+  if (isDev) {
+    console.error(...args)
+  }
+}
+
+// Helper para acesso seguro ao localStorage
+const getLocalStorageItem = (key) => {
+  try {
+    return localStorage.getItem(key)
+  } catch (error) {
+    logError('Erro ao acessar localStorage:', error)
+    return null
+  }
+}
+
+const setLocalStorageItem = (key, value) => {
+  try {
+    localStorage.setItem(key, value)
+    return true
+  } catch (error) {
+    logError('Erro ao salvar no localStorage:', error)
+    return false
+  }
+}
+
 export default function Resultado() {
   const router = useRouter()
   const [resultado, setResultado] = useState(null)
   const [enviando, setEnviando] = useState(true)
   const [enviado, setEnviado] = useState(false)
   const [erro, setErro] = useState(null)
-
-  useEffect(() => {
-    // Verificar dados
-    const candidatoStr = localStorage.getItem('candidato')
-    const respostasStr = localStorage.getItem('respostas')
-    const dataInicio = localStorage.getItem('dataInicio')
-    const dataFim = localStorage.getItem('dataFim')
-
-    if (!candidatoStr || !respostasStr || !dataInicio || !dataFim) {
-      router.push('/')
-      return
-    }
-
-    const candidato = JSON.parse(candidatoStr)
-    const respostas = JSON.parse(respostasStr)
-
-    // Calcular pontuação
-    const pontuacao = calcularPontuacao(respostas)
-    const percentual = ((pontuacao / TOTAL_QUESTOES) * 100).toFixed(2)
-
-    // Calcular tempo total
-    const inicio = new Date(dataInicio)
-    const fim = new Date(dataFim)
-    const tempoTotalMs = fim - inicio
-    const tempoTotalSegundos = Math.floor(tempoTotalMs / 1000)
-    const tempoTotalMinutos = (tempoTotalMs / 1000 / 60).toFixed(2)
-
-    const dadosResultado = {
-      nome: candidato.nome,
-      email: candidato.email,
-      telefone: candidato.telefone,
-      dataInicio,
-      dataFim,
-      tempoTotalMinutos: parseFloat(tempoTotalMinutos),
-      tempoTotalSegundos,
-      pontuacao,
-      percentualAcertos: parseFloat(percentual),
-      respostas
-    }
-
-    setResultado(dadosResultado)
-  }, [router])
-
-  // Enviar automaticamente para produção quando resultado estiver pronto
-  useEffect(() => {
-    if (resultado && !enviando && !enviado && !erro) {
-      enviarResultado(resultado)
-    }
-  }, [resultado])
+  const enviadoRef = useRef(false)
 
   const enviarResultado = async (dados) => {
     setEnviando(true)
     setErro(null)
 
     try {
-      // URL do webhook N8N - Produção
-      const webhookUrl = 'https://n8n.srv881294.hstgr.cloud/webhook/0e31d419-1337-46da-b26c-a5a6e02f5ab2'
+      // URL do webhook N8N - Usa variável de ambiente ou fallback para produção
+      const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL || 
+        'https://n8n.srv881294.hstgr.cloud/webhook/0e31d419-1337-46da-b26c-a5a6e02f5ab2'
 
-      console.log('🔗 Enviando para webhook:', webhookUrl)
-      console.log('📦 Dados:', JSON.stringify(dados, null, 2))
+      log('🔗 Enviando para webhook:', webhookUrl)
+      log('📦 Dados:', JSON.stringify(dados, null, 2))
 
       const response = await fetch(webhookUrl, {
         method: 'POST',
@@ -86,12 +72,12 @@ export default function Resultado() {
         mode: 'cors',
       })
 
-      console.log('📡 Response status:', response.status)
-      console.log('📡 Response ok:', response.ok)
+      log('📡 Response status:', response.status)
+      log('📡 Response ok:', response.ok)
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => '')
-        console.error('❌ Erro do servidor:', errorText)
+        logError('❌ Erro do servidor:', errorText)
 
         if (response.status === 404) {
           throw new Error(`❌ Webhook não encontrado (404)\n\n✅ Verifique no N8N:\n1. Workflow está ATIVO?\n2. URL está correta?\n3. Endpoint correto?`)
@@ -101,16 +87,72 @@ export default function Resultado() {
       }
 
       const responseData = await response.json().catch(() => ({}))
-      console.log('✅ Resposta:', responseData)
+      log('✅ Resposta:', responseData)
 
       setEnviado(true)
     } catch (error) {
-      console.error('❌ Erro completo:', error)
+      logError('❌ Erro completo:', error)
       setErro(error.message)
     } finally {
       setEnviando(false)
     }
   }
+
+  useEffect(() => {
+    try {
+      // Verificar dados com tratamento de erro
+      const candidatoStr = getLocalStorageItem('candidato')
+      const respostasStr = getLocalStorageItem('respostas')
+      const dataInicio = getLocalStorageItem('dataInicio')
+      const dataFim = getLocalStorageItem('dataFim')
+
+      if (!candidatoStr || !respostasStr || !dataInicio || !dataFim) {
+        router.push('/')
+        return
+      }
+
+      const candidato = JSON.parse(candidatoStr)
+      const respostas = JSON.parse(respostasStr)
+
+      // Calcular pontuação
+      const pontuacao = calcularPontuacao(respostas)
+      const percentual = ((pontuacao / TOTAL_QUESTOES) * 100).toFixed(2)
+
+      // Calcular tempo total
+      const inicio = new Date(dataInicio)
+      const fim = new Date(dataFim)
+      const tempoTotalMs = fim - inicio
+      const tempoTotalSegundos = Math.floor(tempoTotalMs / 1000)
+      const tempoTotalMinutos = (tempoTotalMs / 1000 / 60).toFixed(2)
+
+      const dadosResultado = {
+        nome: candidato.nome,
+        email: candidato.email,
+        telefone: candidato.telefone,
+        dataInicio,
+        dataFim,
+        tempoTotalMinutos: parseFloat(tempoTotalMinutos),
+        tempoTotalSegundos,
+        pontuacao,
+        percentualAcertos: parseFloat(percentual),
+        respostas
+      }
+
+      setResultado(dadosResultado)
+    } catch (error) {
+      logError('Erro ao processar dados do resultado:', error)
+      router.push('/')
+    }
+  }, [router])
+
+  // Enviar automaticamente quando resultado estiver pronto (apenas uma vez)
+  useEffect(() => {
+    if (resultado && !enviadoRef.current) {
+      enviadoRef.current = true
+      enviarResultado(resultado)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resultado])
 
   const formatarTempo = (segundos) => {
     const horas = Math.floor(segundos / 3600)
@@ -160,11 +202,11 @@ export default function Resultado() {
                 </div>
               </div>
               <Image
-                src="/assets/logo-marca.png"
+                src="/assets/tochinha p fundo escuro.png"
                 alt="Beauty Smile"
-                width={40}
-                height={40}
-                className="h-10 w-auto"
+                width={56}
+                height={56}
+                className="h-14 w-auto"
               />
             </div>
           </CardHeader>

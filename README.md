@@ -98,6 +98,21 @@ A aplicação é totalmente responsiva e funciona em:
 - ⏱️ **Sem limite de tempo** - Apenas cronometra
 - 🔒 **Sessão única** - Se fechar o navegador, perde o progresso
 
+## 🔧 Configuração de Variáveis de Ambiente
+
+Crie um arquivo `.env.local` na raiz do projeto:
+
+```bash
+# URL do Webhook N8N para envio de resultados
+NEXT_PUBLIC_WEBHOOK_URL=https://n8n.srv881294.hstgr.cloud/webhook/0e31d419-1337-46da-b26c-a5a6e02f5ab2
+```
+
+**URLs disponíveis:**
+- **Produção:** `https://n8n.srv881294.hstgr.cloud/webhook/0e31d419-1337-46da-b26c-a5a6e02f5ab2`
+- **Teste:** `https://n8n.srv881294.hstgr.cloud/webhook-test/0e31d419-1337-46da-b26c-a5a6e02f5ab2`
+
+Se a variável não estiver definida, o sistema usará a URL de produção como fallback.
+
 ## 🚀 Deploy para Hostgator
 
 1. Execute o build:
@@ -105,12 +120,11 @@ A aplicação é totalmente responsiva e funciona em:
 npm run build
 ```
 
-2. Os arquivos estarão em `/out/`
+2. Os arquivos estarão em `.next/`
 
-3. Faça upload da pasta `/out/` para o servidor Hostgator
+3. Faça upload para o servidor Hostgator
 
-4. **Importante:** Alterar URL do webhook de teste para produção em:
-   - `app/resultado/page.js` (linha ~67)
+4. **Importante:** Configure a variável de ambiente `NEXT_PUBLIC_WEBHOOK_URL` no servidor ou use o fallback já configurado
 
 ## 📄 Licença
 

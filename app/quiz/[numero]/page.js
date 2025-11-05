@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Clock, ArrowRight, CheckCircle } from 'lucide-react'
-import { getNumeroOpcoes, getSerie, getImagemPath, TOTAL_QUESTOES } from '@/lib/quiz-data'
+import { getNumeroOpcoes, getSerie, getImagemPath, getOpcaoImagemPath, TOTAL_QUESTOES } from '@/lib/quiz-data'
 
 export default function Questao() {
   const router = useRouter()
@@ -22,30 +22,39 @@ export default function Questao() {
 
   // Verificar dados e redirecionar se necessário
   useEffect(() => {
-    const dadosCandidato = localStorage.getItem('candidato')
-    const dataInicio = localStorage.getItem('dataInicio')
+    try {
+      const dadosCandidato = localStorage.getItem('candidato')
+      const dataInicio = localStorage.getItem('dataInicio')
 
-    if (!dadosCandidato || !dataInicio) {
+      if (!dadosCandidato || !dataInicio) {
+        router.push('/')
+        return
+      }
+
+      setCandidato(JSON.parse(dadosCandidato))
+    } catch (error) {
+      console.error('Erro ao acessar localStorage:', error)
       router.push('/')
-      return
     }
-
-    setCandidato(JSON.parse(dadosCandidato))
   }, [router])
 
   // Cronômetro
   useEffect(() => {
-    const dataInicio = localStorage.getItem('dataInicio')
-    if (!dataInicio) return
+    try {
+      const dataInicio = localStorage.getItem('dataInicio')
+      if (!dataInicio) return
 
-    const interval = setInterval(() => {
-      const inicio = new Date(dataInicio)
-      const agora = new Date()
-      const diff = Math.floor((agora - inicio) / 1000)
-      setTempoDecorrido(diff)
-    }, 1000)
+      const interval = setInterval(() => {
+        const inicio = new Date(dataInicio)
+        const agora = new Date()
+        const diff = Math.floor((agora - inicio) / 1000)
+        setTempoDecorrido(diff)
+      }, 1000)
 
-    return () => clearInterval(interval)
+      return () => clearInterval(interval)
+    } catch (error) {
+      console.error('Erro ao iniciar cronômetro:', error)
+    }
   }, [])
 
   useEffect(() => {
@@ -64,20 +73,25 @@ export default function Questao() {
       return
     }
 
-    // Salvar resposta
-    const respostasStr = localStorage.getItem('respostas')
-    const respostas = respostasStr ? JSON.parse(respostasStr) : []
-    respostas[numeroQuestao - 1] = respostaSelecionada
-    localStorage.setItem('respostas', JSON.stringify(respostas))
+    try {
+      // Salvar resposta com tratamento de erro
+      const respostasStr = localStorage.getItem('respostas')
+      const respostas = respostasStr ? JSON.parse(respostasStr) : []
+      respostas[numeroQuestao - 1] = respostaSelecionada
+      localStorage.setItem('respostas', JSON.stringify(respostas))
 
-    // Ir para próxima questão ou resultado
-    if (numeroQuestao < TOTAL_QUESTOES) {
-      router.push(`/quiz/${numeroQuestao + 1}`)
-    } else {
-      // Última questão - salvar data fim e ir para resultado
-      const dataFim = new Date().toISOString()
-      localStorage.setItem('dataFim', dataFim)
-      router.push('/resultado')
+      // Ir para próxima questão ou resultado
+      if (numeroQuestao < TOTAL_QUESTOES) {
+        router.push(`/quiz/${numeroQuestao + 1}`)
+      } else {
+        // Última questão - salvar data fim e ir para resultado
+        const dataFim = new Date().toISOString()
+        localStorage.setItem('dataFim', dataFim)
+        router.push('/resultado')
+      }
+    } catch (error) {
+      console.error('Erro ao salvar resposta:', error)
+      alert('Erro ao salvar resposta. Por favor, tente novamente.')
     }
   }
 
@@ -106,11 +120,11 @@ export default function Questao() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div className="flex items-center gap-4">
                 <Image
-                  src="/assets/logo-marca.png"
+                  src="/assets/tochinha.png"
                   alt="Beauty Smile"
-                  width={32}
-                  height={32}
-                  className="h-8 w-auto"
+                  width={48}
+                  height={48}
+                  className="h-12 w-auto"
                 />
                 <Badge variant="secondary" className="text-lg px-4 py-1">
                   Série {serie}
@@ -142,12 +156,12 @@ export default function Questao() {
             <div className="mb-8">
               <div className="bg-white border-2 border-gray-200 rounded-lg p-6 flex items-center justify-center">
                 <div className="w-full max-w-2xl aspect-square bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                  <div className="relative w-full h-full">
+                  <div className="relative w-full h-full overflow-hidden">
                     <Image
                       src={imagemPath}
                       alt={`Questão ${numeroQuestao} - Série ${serie}`}
                       fill
-                      className="object-contain"
+                      className="object-cover scale-[1.4]"
                       priority
                     />
                   </div>
@@ -167,8 +181,9 @@ export default function Questao() {
                     key={opcao}
                     onClick={() => setRespostaSelecionada(opcao)}
                     className={`
-                      relative p-6 rounded-lg border-2 transition-all
-                      hover:scale-105 hover:shadow-lg
+                      relative rounded-lg border-2 transition-all
+                      hover:scale-105 hover:shadow-lg aspect-square
+                      flex items-center justify-center overflow-hidden
                       ${
                         respostaSelecionada === opcao
                           ? 'border-cyan-600 bg-cyan-50 shadow-md'
@@ -176,10 +191,16 @@ export default function Questao() {
                       }
                     `}
                   >
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <span className="text-2xl font-semibold">{opcao}</span>
+                    <div className="relative w-full h-full flex items-center justify-center overflow-hidden">
+                      <Image
+                        src={getOpcaoImagemPath(numeroQuestao, opcao)}
+                        alt={`Opção ${opcao}`}
+                        fill
+                        className="object-cover scale-[3.0]"
+                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 16vw"
+                      />
                       {respostaSelecionada === opcao && (
-                        <CheckCircle className="w-5 h-5 text-cyan-600 absolute top-2 right-2" />
+                        <CheckCircle className="w-5 h-5 text-cyan-600 absolute top-1 right-1 bg-white rounded-full z-10" />
                       )}
                     </div>
                   </button>
@@ -195,7 +216,8 @@ export default function Questao() {
                 size="lg"
                 className="w-full sm:w-auto px-12"
                 style={{
-                  backgroundColor: respostaSelecionada === null ? undefined : '#00109e'
+                  backgroundColor: respostaSelecionada === null ? undefined : '#00109e',
+                  color: respostaSelecionada === null ? undefined : 'white'
                 }}
               >
                 {numeroQuestao === TOTAL_QUESTOES ? 'Finalizar Teste' : 'Próxima Questão'}

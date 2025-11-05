@@ -136,7 +136,7 @@ export function InstructionsScreen({ candidatoNome, onStart }: InstructionsScree
                 onClick={onStart}
                 size="lg"
                 className="w-full"
-                style={{ backgroundColor: '#00109e' }}
+                style={{ backgroundColor: '#00109e', color: 'white' }}
               >
                 Iniciar Teste
                 <ArrowRight className="w-5 h-5 ml-2" />
