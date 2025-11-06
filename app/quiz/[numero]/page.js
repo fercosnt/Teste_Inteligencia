@@ -161,7 +161,8 @@ export default function Questao() {
                       src={imagemPath}
                       alt={`Questão ${numeroQuestao} - Série ${serie}`}
                       fill
-                      className="object-cover scale-[1.4]"
+                      className={numeroQuestao === 59 ? "object-contain scale-100" : "object-cover scale-[1.4]"}
+                      style={numeroQuestao === 59 ? { objectPosition: 'center center' } : {}}
                       priority
                     />
                   </div>
