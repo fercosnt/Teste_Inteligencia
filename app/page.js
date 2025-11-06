@@ -81,7 +81,7 @@ export default function Home() {
             <FileText className="h-4 w-4 text-blue-600" />
             <span className="font-medium text-blue-700">Relatórios</span>
           </Button>
-          <div className="flex justify-center flex-col items-center">
+          <div className="flex justify-center">
             <Image
               src="/assets/tochinha.png"
               alt="Beauty Smile"
@@ -89,13 +89,9 @@ export default function Home() {
               height={80}
               className="h-20 w-auto"
             />
-            <p className="mt-2 text-sm font-medium text-gray-700">Ferramentas da Inteligência</p>
           </div>
           <div>
-            <CardTitle className="text-2xl">Teste de Matrizes Progressivas</CardTitle>
-            <CardDescription className="mt-2">
-              Avaliação de Raciocínio Lógico
-            </CardDescription>
+            <CardTitle className="text-2xl">Teste de Raciocínio Lógico</CardTitle>
           </div>
         </CardHeader>
         <CardContent>

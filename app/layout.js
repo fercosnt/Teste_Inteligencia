@@ -1,8 +1,8 @@
 import './globals.css'
 
 export const metadata = {
-  title: 'Teste de Matrizes de Raven',
-  description: 'Teste de Raciocínio Lógico - Matrizes Progressivas de Raven',
+  title: 'Teste de Raciocínio Lógico',
+  description: 'Teste de Raciocínio Lógico',
 }
 
 export default function RootLayout({ children }) {
