@@ -111,7 +111,7 @@ export default function Questao() {
   return (
     <div
       className="min-h-screen p-4 py-8 bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: 'url(/assets/background-gradient.png)' }}
+      style={{ backgroundImage: 'url(/assets/background-gradient.webp)' }}
     >
       <div className="max-w-5xl mx-auto">
         {/* Header fixo */}

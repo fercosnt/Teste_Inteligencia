@@ -55,7 +55,7 @@ export default function Instrucoes() {
   return (
     <div
       className="min-h-screen p-4 py-8 bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: 'url(/assets/background-gradient.png)' }}
+      style={{ backgroundImage: 'url(/assets/background-gradient.webp)' }}
     >
       <div className="max-w-4xl mx-auto">
         <Card className="shadow-2xl">

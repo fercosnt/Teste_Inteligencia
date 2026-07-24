@@ -186,7 +186,7 @@ export default function Resultado() {
   return (
     <div
       className="min-h-screen p-4 py-8 bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: 'url(/assets/background-gradient.png)' }}
+      style={{ backgroundImage: 'url(/assets/background-gradient.webp)' }}
     >
       <div className="max-w-3xl mx-auto">
         <Card className="shadow-2xl">

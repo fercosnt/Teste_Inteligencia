@@ -37,7 +37,7 @@ export default function Relatorios() {
   return (
     <div
       className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
-      style={{ backgroundImage: 'url(/assets/background-gradient.png)' }}
+      style={{ backgroundImage: 'url(/assets/background-gradient.webp)' }}
     >
       <Card className="w-full max-w-2xl shadow-2xl">
         <CardHeader className="text-center space-y-6 pt-8">
