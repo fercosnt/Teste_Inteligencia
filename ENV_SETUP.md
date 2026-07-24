@@ -2,33 +2,38 @@
 
 ## Arquivo `.env.local`
 
-Crie um arquivo `.env.local` na raiz do projeto com a seguinte configuração:
+Crie um arquivo `.env.local` na raiz do projeto (modelo em `.env.example`):
 
 ```bash
-# URL do Webhook N8N para envio de resultados
-NEXT_PUBLIC_WEBHOOK_URL=https://n8n.srv881294.hstgr.cloud/webhook/0e31d419-1337-46da-b26c-a5a6e02f5ab2
+# Supabase — projeto Beauty Smile Hub (qyrkyvoilfaxppbvtkpi)
+NEXT_PUBLIC_SUPABASE_URL=https://qyrkyvoilfaxppbvtkpi.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=
+
+# Senha de acesso ao dashboard /relatorios
+DASHBOARD_PASSWORD=
 ```
 
-## URLs Disponíveis
+## Onde obter cada valor
 
-### Produção
-```
-https://n8n.srv881294.hstgr.cloud/webhook/0e31d419-1337-46da-b26c-a5a6e02f5ab2
-```
+| Variável | Onde |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Já preenchida acima |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase → Project Settings → API Keys → `service_role` |
+| `DASHBOARD_PASSWORD` | Você define. Compartilhe apenas com quem deve ver os resultados |
 
-### Teste
-```
-https://n8n.srv881294.hstgr.cloud/webhook-test/0e31d419-1337-46da-b26c-a5a6e02f5ab2
-```
+## Comportamento quando faltam
 
-## Fallback
-
-Se a variável `NEXT_PUBLIC_WEBHOOK_URL` não estiver definida, o sistema automaticamente usará a URL de produção como fallback.
+| Faltando | O que acontece |
+|---|---|
+| `SUPABASE_SERVICE_ROLE_KEY` | A tela final do candidato mostra erro ao gravar; o dashboard não carrega os dados |
+| `DASHBOARD_PASSWORD` | `/relatorios` responde **503** — fecha o acesso em vez de abrir |
 
 ## Importante
 
-⚠️ **Não commite o arquivo `.env.local`** no repositório Git. Ele contém configurações sensíveis e deve ser mantido localmente.
+⚠️ **Não commite o `.env.local`.** Ele já está no `.gitignore`.
 
-Para produção, configure a variável de ambiente diretamente no servidor/hospedagem.
+⚠️ **Nunca prefixe `SUPABASE_SERVICE_ROLE_KEY` ou `DASHBOARD_PASSWORD` com `NEXT_PUBLIC_`.**
+Esse prefixo embute o valor no JavaScript entregue ao navegador — a service role key
+ignora RLS, então isso daria a qualquer visitante acesso total de leitura e escrita ao banco.
 
-
+Para produção, configure as três em **Vercel → Project Settings → Environment Variables**.

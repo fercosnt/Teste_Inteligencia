@@ -56,42 +56,37 @@ export default function Resultado() {
     setErro(null)
 
     try {
-      // URL do webhook N8N - Usa variável de ambiente ou fallback para produção
-      const webhookUrl = process.env.NEXT_PUBLIC_WEBHOOK_URL || 
-        'https://n8n.srv881294.hstgr.cloud/webhook/0e31d419-1337-46da-b26c-a5a6e02f5ab2'
-
-      log('🔗 Enviando para webhook:', webhookUrl)
-      log('📦 Dados:', JSON.stringify(dados, null, 2))
-
-      const response = await fetch(webhookUrl, {
+      // Enviamos apenas os dados crus. A pontuação é recalculada pelo banco a
+      // partir do gabarito, que nunca sai do servidor — o número exibido nesta
+      // tela é só para o candidato ver na hora. Ver PRD seção 8.2.
+      const response = await fetch('/api/resultados', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(dados),
-        mode: 'cors',
+        body: JSON.stringify({
+          nome: dados.nome,
+          email: dados.email,
+          telefone: dados.telefone,
+          dataInicio: dados.dataInicio,
+          dataFim: dados.dataFim,
+          respostas: dados.respostas,
+        }),
       })
 
       log('📡 Response status:', response.status)
-      log('📡 Response ok:', response.ok)
 
       if (!response.ok) {
-        const errorText = await response.text().catch(() => '')
-        logError('❌ Erro do servidor:', errorText)
-
-        if (response.status === 404) {
-          throw new Error(`❌ Webhook não encontrado (404)\n\n✅ Verifique no N8N:\n1. Workflow está ATIVO?\n2. URL está correta?\n3. Endpoint correto?`)
-        }
-
-        throw new Error(`Erro ${response.status}: ${errorText || 'Verifique se o webhook está ativo no N8N'}`)
+        const { erro } = await response.json().catch(() => ({}))
+        throw new Error(erro || `Erro ${response.status} ao gravar o resultado`)
       }
 
       const responseData = await response.json().catch(() => ({}))
-      log('✅ Resposta:', responseData)
+      log('✅ Resultado gravado:', responseData)
 
       setEnviado(true)
     } catch (error) {
-      logError('❌ Erro completo:', error)
+      logError('❌ Erro ao gravar resultado:', error)
       setErro(error.message)
     } finally {
       setEnviando(false)
@@ -228,7 +223,7 @@ export default function Resultado() {
               <Alert className="border-green-200 bg-green-50">
                 <CheckCircle2 className="h-5 w-5 text-green-600" />
                 <AlertDescription className="text-gray-700">
-                  <strong className="text-green-700">Sucesso!</strong> Seus resultados foram enviados por email.
+                  <strong className="text-green-700">Sucesso!</strong> Seus resultados foram registrados.
                 </AlertDescription>
               </Alert>
             )}
@@ -310,8 +305,7 @@ export default function Resultado() {
                     <strong>Próximos Passos:</strong>
                   </p>
                   <ul className="space-y-1 list-disc list-inside">
-                    <li>Você receberá um email com os resultados detalhados</li>
-                    <li>O relatório completo será enviado para a equipe de RH</li>
+                    <li>Seu resultado já está registrado e disponível para a equipe de RH</li>
                     <li>Aguarde o contato da equipe de recrutamento</li>
                   </ul>
                 </div>
