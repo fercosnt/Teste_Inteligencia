@@ -1,10 +1,31 @@
 import { getSupabaseAdmin } from '@/lib/supabase-server'
 import { gabarito, series } from '@/lib/quiz-data'
+import {
+  ORDENS,
+  normalizarBusca,
+  normalizarOrdem,
+  aplicarFiltros,
+  construirHref,
+  proximaDirecao,
+} from '@/lib/relatorios-query'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { AlertCircle, Users, Clock, Target, TrendingUp, Inbox } from 'lucide-react'
+import {
+  AlertCircle,
+  Users,
+  Clock,
+  Target,
+  TrendingUp,
+  Inbox,
+  SearchX,
+  ArrowUp,
+  ArrowDown,
+  ChevronsUpDown,
+} from 'lucide-react'
 import Image from 'next/image'
+import Link from 'next/link'
 import SairButton from './sair-button'
+import Busca from './busca'
 
 export const dynamic = 'force-dynamic'
 
@@ -33,13 +54,16 @@ const formatarDuracao = (segundos) => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
-async function carregarDados() {
+async function carregarDados({ busca, ordenacao }) {
   const supabase = getSupabaseAdmin()
 
+  // Os agregados continuam olhando a base inteira mesmo com busca ativa: são o
+  // retrato do processo, não do filtro. Quem é filtrado é a lista, e o contador
+  // ao lado da busca deixa claro quantos ficaram de fora.
   const [resumo, classificacao, candidatos] = await Promise.all([
     supabase.from('raven_dashboard_resumo').select('*').single(),
     supabase.from('raven_dashboard_classificacao').select('*'),
-    supabase.from('raven_resultados_detalhe').select('*').order('created_at', { ascending: false }),
+    aplicarFiltros(supabase.from('raven_resultados_detalhe').select('*'), { busca, ordenacao }),
   ])
 
   const erro = resumo.error || classificacao.error || candidatos.error
@@ -128,6 +152,44 @@ function DetalheQuestoes({ letra, respostas }) {
   )
 }
 
+function CabecalhoOrdenavel({ chave, className, busca, ordenacao }) {
+  const ativa = ordenacao.ordem === chave
+  const Seta = !ativa ? ChevronsUpDown : ordenacao.ascendente ? ArrowUp : ArrowDown
+
+  return (
+    <div className={className}>
+      <Link
+        href={construirHref({
+          busca,
+          ordem: chave,
+          direcao: proximaDirecao(chave, ordenacao.ordem, ordenacao.direcao),
+        })}
+        aria-sort={ativa ? (ordenacao.ascendente ? 'ascending' : 'descending') : 'none'}
+        className={`inline-flex items-center gap-1 whitespace-nowrap hover:text-gray-900 transition-colors ${
+          ativa ? 'text-gray-900 font-semibold' : 'text-gray-500'
+        }`}
+      >
+        {ORDENS[chave].rotulo}
+        <Seta className={`w-3.5 h-3.5 ${ativa ? 'text-blue-600' : 'text-gray-300'}`} />
+      </Link>
+    </div>
+  )
+}
+
+function CabecalhoTabela({ busca, ordenacao }) {
+  const props = { busca, ordenacao }
+
+  return (
+    <div className="hidden sm:grid grid-cols-12 gap-3 items-center px-4 py-2 border-b bg-gray-50 text-xs uppercase tracking-wide">
+      <CabecalhoOrdenavel chave="nome" className="col-span-4" {...props} />
+      <CabecalhoOrdenavel chave="data" className="col-span-2" {...props} />
+      <CabecalhoOrdenavel chave="tempo" className="col-span-2" {...props} />
+      <CabecalhoOrdenavel chave="pontuacao" className="col-span-1" {...props} />
+      <div className="col-span-3 text-gray-500">Classificação</div>
+    </div>
+  )
+}
+
 function LinhaCandidato({ c }) {
   const seriesDoCandidato = [
     { letra: 'A', acertos: c.acertos_serie_a, percentual: c.percentual_serie_a },
@@ -191,15 +253,24 @@ function LinhaCandidato({ c }) {
   )
 }
 
-export default async function Relatorios() {
+export default async function Relatorios({ searchParams }) {
+  const params = (await searchParams) ?? {}
+  const busca = normalizarBusca(params.q)
+  const ordenacao = normalizarOrdem(params.ordem, params.dir)
+
   let dados
   let erroCarregamento = null
 
   try {
-    dados = await carregarDados()
+    dados = await carregarDados({ busca, ordenacao })
   } catch (error) {
     erroCarregamento = error.message
   }
+
+  // Base vazia e busca sem resultado são situações diferentes: a primeira não
+  // tem o que filtrar, a segunda precisa oferecer o caminho de volta.
+  const baseVazia = !erroCarregamento && Number(dados.resumo?.total_candidatos ?? 0) === 0
+  const buscaSemResultado = !erroCarregamento && !baseVazia && dados.candidatos.length === 0
 
   return (
     <div
@@ -238,7 +309,7 @@ export default async function Relatorios() {
               </Alert>
             )}
 
-            {!erroCarregamento && dados.candidatos.length === 0 && (
+            {baseVazia && (
               <div className="text-center py-12">
                 <Inbox className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-600 font-medium">Nenhum candidato ainda</p>
@@ -248,7 +319,7 @@ export default async function Relatorios() {
               </div>
             )}
 
-            {!erroCarregamento && dados.candidatos.length > 0 && (
+            {!erroCarregamento && !baseVazia && (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   <CardMetrica
@@ -326,20 +397,50 @@ export default async function Relatorios() {
                 </div>
 
                 <Card className="overflow-hidden">
-                  <CardHeader className="pb-3">
+                  <CardHeader className="pb-3 space-y-4">
                     <CardTitle className="text-base">
                       Candidatos
                       <span className="text-gray-500 font-normal text-sm ml-2">
                         clique para ver o detalhe por série
                       </span>
                     </CardTitle>
+                    <Busca
+                      busca={busca}
+                      ordem={ordenacao.ordem}
+                      direcao={ordenacao.direcao}
+                      total={dados.candidatos.length}
+                    />
                   </CardHeader>
                   <CardContent className="p-0">
-                    <div className="border-t">
-                      {dados.candidatos.map((c) => (
-                        <LinhaCandidato key={c.id} c={c} />
-                      ))}
-                    </div>
+                    {buscaSemResultado ? (
+                      <div className="text-center py-12 border-t">
+                        <SearchX className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-600 font-medium">
+                          Nenhum candidato encontrado para “{busca}”
+                        </p>
+                        <p className="text-gray-500 text-sm mt-1">
+                          A busca olha nome e email.{' '}
+                          <Link
+                            href={construirHref({
+                              busca: '',
+                              ordem: ordenacao.ordem,
+                              direcao: ordenacao.direcao,
+                            })}
+                            className="text-blue-600 hover:underline"
+                          >
+                            Ver todos os {dados.resumo.total_candidatos} candidatos
+                          </Link>
+                          .
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <CabecalhoTabela busca={busca} ordenacao={ordenacao} />
+                        {dados.candidatos.map((c) => (
+                          <LinhaCandidato key={c.id} c={c} />
+                        ))}
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </>
