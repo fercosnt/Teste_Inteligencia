@@ -287,6 +287,17 @@ lib/                    cliente Supabase server-side
 
 ---
 
+## 9b. Decisões Tomadas
+
+| Data | Decisão | Contexto |
+|---|---|---|
+| 2026-07-24 | Acesso ao dashboard por **senha única** em variável de ambiente | Uso interno neste primeiro momento; contas individuais ficam para quando houver mais de um perfil de acesso |
+| 2026-07-24 | Chamada ao N8N **removida de vez** | O workflow não existe mais; manter a chamada só geraria erro na tela do candidato |
+| 2026-07-24 | Botão "Relatórios" **permanece** na tela inicial | Agora leva à tela de senha; o comportamento foi validado |
+| 2026-07-24 | **Sem envio de email** neste ciclo | Segue em aberto para um momento futuro — a copy das telas foi corrigida para não prometer o que não entrega |
+
+---
+
 ## 10. Questões em Aberto
 
 | # | Questão | Bloqueia? |
