@@ -37,5 +37,8 @@ export async function middleware(request) {
 }
 
 export const config = {
-  matcher: ['/relatorios/:path*'],
+  // O export entrega a mesma planilha de dados pessoais que o dashboard mostra,
+  // então passa pela mesma porta. A rota é listada de forma exata de propósito:
+  // /api/resultados, por onde o candidato grava o teste, tem que ficar aberta.
+  matcher: ['/relatorios/:path*', '/api/resultados/export'],
 }

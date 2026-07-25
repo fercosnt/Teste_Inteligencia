@@ -83,11 +83,14 @@ Métricas que **não podem piorar** com esta mudança:
 - Dashboard em `/relatorios`, protegido por senha
 - Correção da copy que promete email
 
-### v2 (próximo ciclo)
+### v2 (entregue em 2026-07-25, na branch `feature/raven-dashboard-v2`)
 
-- Envio de email de resultado ao candidato e ao RH
-- Exportação CSV/PDF do dashboard
-- Filtros e busca por candidato no dashboard
+- Suíte de testes cobrindo a pontuação no banco e a validação da rota de gravação — o mínimo
+  que a seção 7b definiu para a v1 e que a v1 não teve
+- Busca por candidato (nome ou email) e ordenação da lista, com o estado na URL
+- Exportação CSV do que está na tela, respeitando busca e ordenação
+
+Fora desta v2: envio de email (ver Fora do Escopo) e exportação em PDF.
 
 ---
 
@@ -285,11 +288,28 @@ O campo `pontuacao` deixa de ser enviado. Se vier, é ignorado.
 ### 8.7 Topologia dos arquivos novos
 
 ```
-app/api/resultados/     rota de gravação (server-side)
-app/relatorios/         dashboard (server component, lê as views)
-middleware.js           guarda de senha das rotas do dashboard
-lib/                    cliente Supabase server-side
+app/api/resultados/         rota de gravação (server-side)
+app/api/resultados/export/  export CSV, atrás do mesmo middleware   (v2)
+app/relatorios/             dashboard (server component, lê as views)
+app/relatorios/busca.js     campo de busca e botão de export        (v2)
+middleware.js               guarda de senha do dashboard e do export
+lib/supabase-server.js      cliente Supabase server-side
+lib/relatorios-query.js     `?q=`/`?ordem=`/`?dir=` → consulta      (v2)
+lib/csv.js                  geração do CSV                          (v2)
+tests/                      Vitest: db (Supabase real) e api (dublê) (v2)
 ```
+
+### 8.8 Onde vive a regra, na v2
+
+Duas funções concentram o que a tela e o export têm em comum, para que não existam duas
+leituras possíveis do mesmo `?q=`:
+
+- **`aplicarFiltros`** é chamada pela página, pelo export e pelos testes — o que é testado é
+  o que roda. Ordem ou direção fora do previsto cai no padrão em vez de quebrar: a URL é
+  editável pelo usuário e não é contrato.
+- **`filtroBusca`** escapa em duas camadas, nesta ordem: `%` e `_` para que o termo seja
+  literal, e aspas/barras porque o valor vai entre aspas no filtro `or` do PostgREST — o que
+  de quebra neutraliza a vírgula, que senão viraria separador e traria linhas a mais.
 
 ---
 
@@ -329,5 +349,7 @@ lib/                    cliente Supabase server-side
 ---
 
 ## Changelog
+
+**v1.1 (2026-07-25)** — v2 entregue na branch `feature/raven-dashboard-v2`: testes, busca, ordenação e export CSV. Atualiza as seções 3 e 8.7 e acrescenta a 8.8.
 
 **v1.0 (2026-07-24)** — PRD inicial. Substitui as seções 4.9 (Integração N8N/Airtable) e 7.5 (Airtable Schema) do `prd-quiz-matrizes-raven.md` v2.0.
