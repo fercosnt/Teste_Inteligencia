@@ -3,14 +3,17 @@
 **Parent**: [PRD/PRD.md](PRD.md)
 **Gerado em**: 2026-07-24
 **Slicing**: vertical
-**Total slices**: 11 — 7 concluídas · 4 no backlog (4 Direto / 0 Bloqueante), além da Slice 0 de branch
+**Total slices**: 11 — 11 concluídas · 0 no backlog
 
 > **Estado**: a v1 está em produção em https://ti.bslabs.com.br desde 2026-07-24.
-> A Parte A registra o que já foi entregue, com os commits. A Parte B é o trabalho à frente.
+> A Parte A registra o que foi entregue na v1; a Parte B, a v2.
 >
 > **Atualização 2026-07-24**: as três fatias bloqueantes foram resolvidas. O limite de 40% e a
 > retenção foram decididos e implementados (viraram A5 e A6); o email foi descartado desta fase.
-> O backlog restante é 100% executável sem intervenção humana.
+>
+> **Atualização 2026-07-25**: o backlog inteiro foi executado na branch
+> `feature/raven-dashboard-v2` — testes, busca, ordenação e export CSV. Ainda não está em
+> produção: falta merge e deploy.
 
 ---
 
@@ -98,126 +101,141 @@ Fatias entregues. Mantidas aqui para rastreabilidade PRD → commit.
 
 ---
 
-# Parte B — Backlog
+# Parte B — v2 (concluída na branch `feature/raven-dashboard-v2`)
 
-- [ ] **Slice 0: Criar feature branch** [Direto]
-  - Branch: `feature/raven-dashboard-v2`
-  - Base: `main`
-  - Verificar que main está atualizado (`git pull`)
+- [x] **Slice 0: Criar feature branch** [Direto]
+  - Branch: `feature/raven-dashboard-v2` — criada a partir de `main` atualizado
 
 ---
 
-- [ ] **Slice 1: Suíte de testes cobre o cálculo de pontuação e a validação da rota** [Direto]
+- [x] **Slice 1: Suíte de testes cobre o cálculo de pontuação e a validação da rota** [Direto]
 
   **Demo**: `npm test` roda e falha se alguém quebrar o gabarito ou afrouxar a validação do payload.
 
   **Camadas**: teste + config
 
-  **Bloqueado por**: Nenhum — pode começar imediato
-
-  > **Por que é a primeira**: o PRD (seção 7b) definiu esses testes como o mínimo aceitável
-  > para a v1, e a v1 foi ao ar sem eles — a verificação foi toda manual. Enquanto essa
-  > lacuna existir, uma alteração no gabarito ou na validação passa despercebida.
+  > **Por que foi a primeira**: o PRD (seção 7b) definiu esses testes como o mínimo aceitável
+  > para a v1, e a v1 foi ao ar sem eles — a verificação foi toda manual.
 
   **Subtarefas**:
-  - [ ] Instalar e configurar Vitest (não há runner no projeto; `package.json` não tem script `test`)
-  - [ ] Teste de `raven_acertos`: respostas conhecidas → acertos esperados por série e total
-  - [ ] Teste da validação de `POST /api/resultados`: 59 respostas → 400; opção 7 na série A → 400; `dataFim` < `dataInicio` → 400
-  - [ ] Teste anti-fraude: payload com `pontuacao: 60` e respostas erradas grava a pontuação real
-  - [ ] Adicionar `"test": "vitest"` ao `package.json`
+  - [x] Vitest instalado e configurado (alias `@/` + carga do `.env.local` para os testes de banco)
+  - [x] Teste de `raven_acertos`: respostas conhecidas → acertos esperados por série e total
+  - [x] Teste da validação de `POST /api/resultados`: 59 e 61 respostas → 400; opção 7 na série A → 400 (e válida na série C, que tem 8 opções); `dataFim` < `dataInicio` → 400
+  - [x] Teste anti-fraude: payload com `pontuacao: 60` e respostas erradas grava a pontuação real
+  - [x] `"test": "vitest run"` e `"test:watch": "vitest"` no `package.json`
 
-  **Arquivos relevantes**:
-  - `package.json`
-  - `tests/api/resultados.test.js`
-  - `tests/db/pontuacao.test.js`
+  **Entregue por**: `a38ad95` — [vitest.config.js](../vitest.config.js), [tests/db/pontuacao.test.js](../tests/db/pontuacao.test.js), [tests/api/resultados.test.js](../tests/api/resultados.test.js)
 
-  **Verificação** (slice é DEMONSTRÁVEL quando):
-  - [ ] `npm test` passa com os 4 cenários acima
-  - [ ] Alterar um valor em `raven_gabarito()` faz o teste de pontuação falhar
-  - [ ] `npm run build` continua passando
+  **Verificação**:
+  - [x] `npm test` passa — 17 testes nesta fatia
+  - [x] Divergência no gabarito faz 4 testes falharem (verificado alterando `lib/quiz-data.js` e restaurando)
+  - [x] `npm run build` continua passando
 
-  **Commit**: `test: cover scoring logic and results endpoint validation`
+  > **Decisões de teste**: `tests/db` chama `raven_gabarito`/`raven_acertos` via RPC contra o
+  > Supabase real — as funções são `IMMUTABLE` e nada é inserido, então rodar contra produção
+  > é seguro. O teste mais valioso compara o gabarito do banco com o de `lib/quiz-data.js`:
+  > se divergirem, a tela mostra um número e a base guarda outro.
+  >
+  > `tests/api` dubla o Supabase. O que a rota promete é *o que ela manda gravar*; o que o
+  > Postgres devolve já é coberto pelo teste de banco. Dublar também evita inserir candidatos
+  > falsos na tabela que o RH lê.
 
 ---
 
-- [ ] **Slice 2: RH busca um candidato por nome ou email** [Direto]
+- [x] **Slice 2: RH busca um candidato por nome ou email** [Direto]
 
   **Demo**: RH digita "maria" no campo de busca e a lista filtra para os candidatos correspondentes.
 
   **Camadas**: API + UI + teste
 
-  **Bloqueado por**: Nenhum — pode começar imediato
-
   **Subtarefas**:
-  - [ ] `/relatorios` aceita `?q=` e filtra por `nome` ou `email` (`ilike`)
-  - [ ] Campo de busca acima da tabela, preservando o valor na URL
-  - [ ] Estado vazio específico de busca ("nenhum candidato encontrado para X")
-  - [ ] Teste: busca por termo existente retorna subconjunto; termo inexistente retorna vazio
+  - [x] `/relatorios` aceita `?q=` e filtra por `nome` ou `email` (`ilike`)
+  - [x] Campo de busca acima da tabela, preservando o valor na URL
+  - [x] Estado vazio específico de busca ("nenhum candidato encontrado para X")
+  - [x] Teste: busca por termo existente retorna subconjunto; termo inexistente retorna vazio
 
-  **Arquivos relevantes**:
-  - `app/relatorios/page.js`
-  - `app/relatorios/busca.js`
+  **Entregue por**: `3e9d066` — [lib/relatorios-query.js](../lib/relatorios-query.js), [app/relatorios/busca.js](../app/relatorios/busca.js), [app/relatorios/page.js](../app/relatorios/page.js)
 
   **Verificação**:
-  - [ ] Buscar por nome parcial filtra a lista
-  - [ ] Recarregar a página mantém o filtro (está na URL)
-  - [ ] Limpar a busca volta a listar todos
+  - [x] Buscar por nome parcial filtra a lista
+  - [x] Recarregar a página mantém o filtro (está na URL)
+  - [x] Limpar a busca volta a listar todos
 
-  **Commit**: `feat: search candidates by name or email in dashboard`
+  > **Escapamento em duas camadas**, na ordem: `%` e `_` para que o termo seja literal
+  > (procurar "50%" não pode casar com todo mundo), e aspas/barras porque o valor vai entre
+  > aspas no filtro `or` — o que também neutraliza a vírgula, que senão viraria separador.
+  > Coberto contra o Postgres real em [tests/db/busca.test.js](../tests/db/busca.test.js).
+  >
+  > Os agregados continuam olhando a base inteira mesmo com busca ativa: são o retrato do
+  > processo, não do filtro. O contador ao lado do campo diz quantos ficaram de fora.
 
 ---
 
-- [ ] **Slice 3: RH ordena a lista por pontuação, data ou tempo** [Direto]
+- [x] **Slice 3: RH ordena a lista por pontuação, data ou tempo** [Direto]
 
-  **Demo**: RH clica no cabeçalho "Pontuação" e a lista reordena do maior para o menor.
+  **Demo**: RH clica no cabeçalho "Pontos" e a lista reordena do maior para o menor.
 
   **Camadas**: API + UI
 
-  **Bloqueado por**: Slice 2 (compartilham o estado de query na URL)
-
   **Subtarefas**:
-  - [ ] `/relatorios` aceita `?ordem=` e `?dir=` com validação de campos permitidos
-  - [ ] Cabeçalhos clicáveis com indicador visual da ordenação ativa
-  - [ ] Ordenação padrão continua sendo data decrescente
+  - [x] `/relatorios` aceita `?ordem=` e `?dir=` com validação de campos permitidos
+  - [x] Cabeçalhos clicáveis com indicador visual da ordenação ativa
+  - [x] Ordenação padrão continua sendo data decrescente
 
-  **Arquivos relevantes**:
-  - `app/relatorios/page.js`
+  **Entregue por**: `3e9d066` — mesmo commit da Slice 2: a própria tasklist marca esta fatia
+  como bloqueada pela anterior porque compartilham o estado de query na URL, e separá-las
+  depois exigiria desmontar o mesmo mecanismo em dois pedaços artificiais.
 
   **Verificação**:
-  - [ ] Ordenar por pontuação decrescente coloca a maior nota no topo
-  - [ ] Ordenação combina com a busca da Slice 2 sem se anular
-  - [ ] Campo inválido em `?ordem=` cai no padrão em vez de quebrar
+  - [x] Ordenar por pontuação decrescente coloca a maior nota no topo
+  - [x] Ordenação combina com a busca da Slice 2 sem se anular
+  - [x] Campo inválido em `?ordem=` cai no padrão em vez de quebrar
 
-  **Commit**: `feat: sort candidate list by score, date or duration`
+  > Ordena por `data_fim`, a data que a tela mostra — e não por `created_at`, como antes.
+  > Clicar na coluna ativa inverte; clicar em outra começa pela direção que faz sentido
+  > para o dado (nota alta primeiro, nome de A a Z, mais rápido primeiro).
 
 ---
 
-- [ ] **Slice 4: RH exporta os resultados em CSV** [Direto]
+- [x] **Slice 4: RH exporta os resultados em CSV** [Direto]
 
   **Demo**: RH clica "Exportar CSV" e baixa um arquivo com os candidatos atualmente filtrados.
 
   **Camadas**: API + UI + teste
 
-  **Bloqueado por**: Slices 2 e 3 (o export respeita filtro e ordenação vigentes)
-
   **Subtarefas**:
-  - [ ] `GET /api/resultados/export` protegido pelo mesmo middleware, aceitando os mesmos filtros
-  - [ ] Gerar CSV com cabeçalho: nome, email, telefone, data, tempo, acertos por série, total, percentual, classificação
-  - [ ] Escapar vírgulas, aspas e quebras de linha nos campos de texto
-  - [ ] Botão de exportar no dashboard
-  - [ ] Teste: export sem cookie retorna redirect; com cookie retorna `text/csv`
+  - [x] `GET /api/resultados/export` protegido pelo mesmo middleware, aceitando os mesmos filtros
+  - [x] CSV com cabeçalho: nome, email, telefone, início, conclusão, tempo, acertos por série, total, percentual, classificação
+  - [x] Escapar separador, aspas e quebras de linha nos campos de texto
+  - [x] Botão de exportar no dashboard, levando busca e ordenação junto
+  - [x] Teste: export sem cookie redireciona; com cookie retorna `text/csv`
 
-  **Arquivos relevantes**:
-  - `app/api/resultados/export/route.js`
-  - `app/relatorios/page.js`
-  - `middleware.js` (incluir a rota no matcher)
+  **Entregue por**: `a8018c5` — [lib/csv.js](../lib/csv.js), [app/api/resultados/export/route.js](../app/api/resultados/export/route.js), [middleware.js](../middleware.js), [app/relatorios/busca.js](../app/relatorios/busca.js)
 
   **Verificação**:
-  - [ ] Arquivo baixado abre no Excel com as colunas corretas
-  - [ ] Um nome contendo vírgula não quebra as colunas
-  - [ ] Export sem autenticação não entrega dados
+  - [x] Arquivo baixado abre no Excel com as colunas corretas
+  - [x] Um nome contendo vírgula não quebra as colunas
+  - [x] Export sem autenticação não entrega dados
 
-  **Commit**: `feat: export filtered results as CSV`
+  > **Formato mira o Excel em português**, que é onde o RH abre o arquivo, e não um parser
+  > genérico: separador `;` (com `,` o Excel pt-BR joga a linha inteira numa coluna só),
+  > vírgula decimal e BOM (sem ele "João" vira "JoÃ£o"). Se um dia isso precisar alimentar
+  > um script, o lugar de mudar é `lib/csv.js` — o route handler não sabe nada de formato.
+  >
+  > **Injeção de fórmula**: campo começando com `=`, `+`, `-` ou `@` sai prefixado com
+  > apóstrofo. Nome e email vêm de quem faz o teste; sem isso, um candidato escolheria qual
+  > fórmula roda quando o RH abre a planilha.
+  >
+  > **A gravação do candidato ficou de fora do matcher** de propósito. Um matcher amplo
+  > (`/api/resultados/:path*`) fecharia `POST /api/resultados` e ninguém concluiria o teste.
+  > Há teste travando essa distinção.
+
+---
+
+## O que falta para chegar em produção
+
+- [ ] Merge de `feature/raven-dashboard-v2` em `main`
+- [ ] Deploy na Vercel e conferência de `/relatorios` com dados reais
 
 ---
 
