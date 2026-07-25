@@ -95,7 +95,7 @@ Métricas que **não podem piorar** com esta mudança:
 
 | Item | Por quê | Futuro |
 |---|---|---|
-| **Envio de email** | Exige provedor (Resend/SES), template e domínio verificado — é um projeto próprio. Em v1 a copy da tela é corrigida para não prometer o que não entrega. | v2 |
+| **Envio de email** | Decidido em 2026-07-24: não haverá envio de email nesta fase, nem ao candidato nem ao RH. A copy das telas foi corrigida para não prometer o que não entrega. | Sem data — reabrir quando houver necessidade |
 | **Autenticação individual por usuário (Supabase Auth)** | Senha única resolve o risco imediato (link aberto) com uma fração do esforço. Contas individuais só se pagam quando houver mais de um perfil de acesso ou necessidade de auditoria de quem viu o quê. | v2, se surgir a necessidade |
 | **Percentis normativos do Raven** | Converter pontuação bruta em percentil por faixa etária exige as tabelas normativas licenciadas do teste, que não temos. | Fora — depende de aquisição de material |
 | **Edição/exclusão de resultados pelo dashboard** | Resultado de teste psicométrico é registro imutável; permitir edição destrói a confiabilidade. | Fora por decisão de produto |
@@ -236,9 +236,25 @@ RLS habilitado **sem policy pública** — nega tudo por padrão; a escrita pass
 
 **Validação executada**: duas linhas de teste inseridas e conferidas — gabarito perfeito deu 60/60 e 100,00%; série A zerada com o resto correto deu 48/60 e 80,00%; 2520s virou 42,00 min. As linhas de teste foram removidas; a tabela está vazia.
 
+### 8.3b Retenção de dados (LGPD)
+
+Migration `add_retencao_1_ano` + `schedule_retencao_raven`, aplicadas em 2026-07-24.
+
+A coluna `anonimizado_em` marca quando os dados pessoais foram removidos. A função
+`raven_anonimizar_antigos()` substitui `nome`, `email` e `telefone` de linhas com mais de
+1 ano, preservando respostas, pontuação e tempos — as médias históricas do dashboard não
+mudam retroativamente. É idempotente: ignora quem já foi anonimizado.
+
+Agendada via `pg_cron` (extensão habilitada nesta entrega) em `0 6 * * *` — 03:00 de Brasília.
+
+**Validação executada**: linha com 13 meses foi anonimizada mantendo `pontuacao_total = 60`;
+linha com 1 mês ficou intacta; segunda execução retornou 0 linhas afetadas.
+
 ### 8.4 Duas correções em relação às fórmulas do Airtable
 
 **Escala do percentual.** As fórmulas comparavam `{Percentual_Acertos} >= 0.95` (escala 0–1), mas o app envia `percentualAcertos` já multiplicado por 100 ([app/resultado/page.js:119](../app/resultado/page.js#L119)). Alimentada com `75.00`, a fórmula classificaria **todo candidato como "🏆 Excepcional"**. Padronizado em 0–100 e os limites viraram `95 / 90 / 75 / 60 / 40`.
+
+**Limite inferior incoerente.** A fórmula original usava `> 0.40` para "Regular", cujo rótulo dizia "41-59%" — então `24/60 = 40,00%` caía em "Abaixo da Média (<40%)", apesar de 40 não ser menor que 40. Corrigido em 2026-07-24 para `>= 40`, com o rótulo virando "Regular (40-59%)". Verificado: 24 acertos → Regular; 23 acertos (38,33%) → Abaixo da Média.
 
 **Percentual por série.** `ROUND({Acertos_Serie_A}/12, 1)` retorna uma razão (0,8 para 10/12), não uma porcentagem — enquanto os blocos de texto usavam corretamente `/12*100` (83,3%). Adotada a versão com `*100`.
 
@@ -295,6 +311,9 @@ lib/                    cliente Supabase server-side
 | 2026-07-24 | Chamada ao N8N **removida de vez** | O workflow não existe mais; manter a chamada só geraria erro na tela do candidato |
 | 2026-07-24 | Botão "Relatórios" **permanece** na tela inicial | Agora leva à tela de senha; o comportamento foi validado |
 | 2026-07-24 | **Sem envio de email** neste ciclo | Segue em aberto para um momento futuro — a copy das telas foi corrigida para não prometer o que não entrega |
+| 2026-07-24 | Limite da classificação passa de `> 40` para **`>= 40`**, com o rótulo virando "Regular (40-59%)" | Com `> 40`, um candidato com exatamente 24/60 (40,00%) era rotulado "Abaixo da Média (<40%)" — mas 40 não é menor que 40. Agora toda faixa fecha com a anterior sem buraco |
+| 2026-07-24 | Retenção de dados pessoais: **1 ano**, por **anonimização** | Remove nome, email e telefone (o que a LGPD alcança) e preserva respostas, pontuação e tempos, para que as médias históricas do dashboard não mudem retroativamente |
+| 2026-07-24 | **Email removido do backlog** | Não haverá envio de email nesta fase. As fatias 7 e 8 saíram da tasklist e voltaram para Fora do Escopo |
 
 ---
 
@@ -302,9 +321,9 @@ lib/                    cliente Supabase server-side
 
 | # | Questão | Bloqueia? |
 |---|---|---|
-| 1 | O limite de 40% exato: hoje `24/60 = 40,00%` cai em "🔴 Abaixo da Média (<40%)", fiel à fórmula original (`> 0.40`), mas o rótulo de "Regular" diz "41-59%". Manter fiel ou mudar para `>= 40`? | Não — implementado fiel ao original |
+| 1 | ~~O limite de 40% exato~~ | **Resolvida** em 2026-07-24 — ver seção 9b |
 | 2 | O teste não tem autenticação nem limite de tentativas: a mesma pessoa pode responder várias vezes e cada tentativa vira uma linha. Deduplicar por email ou manter todas? | Não — v1 mantém todas |
-| 3 | Retenção: por quanto tempo guardar dados pessoais de candidatos não contratados? Relevante para LGPD | Não — mas precisa de definição antes de volume alto |
+| 3 | ~~Retenção de dados pessoais~~ | **Resolvida** em 2026-07-24 — 1 ano, por anonimização |
 | 4 | O RH quer comparar candidatos entre si (ranking) ou avaliar um por vez? Muda a hierarquia visual do dashboard | Não — v1 entrega lista ordenável |
 
 ---

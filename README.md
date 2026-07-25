@@ -101,6 +101,23 @@ respostas cruas. Um cliente adulterado não consegue forjar uma nota.
 | `raven_dashboard_resumo` | View. Agregados: total, tempo médio, pontuação média, média por série |
 | `raven_dashboard_classificacao` | View. Distribuição por faixa de desempenho |
 
+### 🔒 Retenção de dados (LGPD)
+
+Dados pessoais de candidatos são mantidos por **1 ano**. Depois disso, `nome`, `email` e
+`telefone` são substituídos automaticamente e a coluna `anonimizado_em` é marcada.
+
+Respostas, pontuação e tempos são **preservados** — a anonimização remove quem a pessoa era,
+não o que ela respondeu, para que as médias históricas do dashboard não mudem retroativamente.
+
+| Item | Valor |
+|---|---|
+| Prazo | 1 ano a partir de `created_at` |
+| Modalidade | Anonimização (não exclusão) |
+| Função | `raven_anonimizar_antigos()` — idempotente |
+| Agendamento | `pg_cron`, diariamente às `0 6 * * *` UTC (03:00 de Brasília) |
+
+Para rodar manualmente: `select public.raven_anonimizar_antigos();` — retorna quantas linhas foram afetadas.
+
 ## 🎨 Responsividade
 
 A aplicação é totalmente responsiva e funciona em:

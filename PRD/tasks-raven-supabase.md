@@ -3,10 +3,14 @@
 **Parent**: [PRD/PRD.md](PRD.md)
 **Gerado em**: 2026-07-24
 **Slicing**: vertical
-**Total slices**: 13 — 5 concluídas na v1 · 8 no backlog (5 Direto / 3 Bloqueante = 37%), além da Slice 0 de branch
+**Total slices**: 11 — 7 concluídas · 4 no backlog (4 Direto / 0 Bloqueante), além da Slice 0 de branch
 
 > **Estado**: a v1 está em produção em https://ti.bslabs.com.br desde 2026-07-24.
 > A Parte A registra o que já foi entregue, com os commits. A Parte B é o trabalho à frente.
+>
+> **Atualização 2026-07-24**: as três fatias bloqueantes foram resolvidas. O limite de 40% e a
+> retenção foram decididos e implementados (viraram A5 e A6); o email foi descartado desta fase.
+> O backlog restante é 100% executável sem intervenção humana.
 
 ---
 
@@ -63,6 +67,34 @@ Fatias entregues. Mantidas aqui para rastreabilidade PRD → commit.
   **Entregue por**: `d669e8e` — [app/relatorios/page.js](../app/relatorios/page.js), [app/relatorios/sair-button.js](../app/relatorios/sair-button.js)
 
   **Verificado**: números da tela idênticos a `raven_dashboard_resumo`; conferido visualmente por screenshot
+
+- [x] **Slice A5: Corrigir o limite de 40% na classificação** [era Bloqueante — decidido em 2026-07-24]
+
+  **Demo**: um candidato com exatamente 24/60 é classificado de forma coerente com o rótulo exibido.
+
+  **Camadas**: schema
+
+  **Decisão tomada**: `> 40` virou `>= 40`, e o rótulo de Regular virou "40-59%". Agora toda faixa
+  fecha com a anterior sem buraco — antes, 40,00% exato caía em "menor que 40%".
+
+  **Entregue por**: migration `fix_classificacao_limite_40`
+
+  **Verificado**: 24 acertos (40,00%) → "🟠 Regular (40-59%)"; 23 acertos (38,33%) → "🔴 Abaixo da Média (<40%)"
+
+- [x] **Slice A6: Retenção de dados de candidatos** [era Bloqueante — decidido em 2026-07-24]
+
+  **Demo**: registros com mais de 1 ano perdem os dados pessoais automaticamente, sem intervenção.
+
+  **Camadas**: schema + job
+
+  **Decisão tomada**: 1 ano, por **anonimização** em vez de exclusão — remove nome, email e
+  telefone, preserva respostas, pontuação e tempos, para que as médias históricas do dashboard
+  não mudem retroativamente.
+
+  **Entregue por**: migrations `add_retencao_1_ano` e `schedule_retencao_raven`
+
+  **Verificado**: linha de 13 meses anonimizada mantendo `pontuacao_total = 60`; linha de 1 mês
+  intacta; segunda execução retornou 0 (idempotente); job ativo em `cron.job` às `0 6 * * *`
 
 ---
 
@@ -189,128 +221,11 @@ Fatias entregues. Mantidas aqui para rastreabilidade PRD → commit.
 
 ---
 
-- [ ] **Slice 5: Corrigir o limite de 40% na classificação** [Bloqueante]
+## Fora do escopo desta fase
 
-  **Demo**: um candidato com exatamente 24/60 passa a ser classificado de forma coerente com o rótulo exibido.
-
-  **Camadas**: schema + verificação
-
-  **Bloqueado por**: Nenhum tecnicamente — aguarda decisão
-
-  **Decisão pendente**: hoje `24/60 = 40,00%` cai em "🔴 Abaixo da Média (<40%)", fiel à fórmula
-  original do Airtable (`> 0.40`), mas o rótulo de "Regular" diz "41-59%" — 40% não é menor que 40%.
-  Trocar para `>= 40` (e ajustar o rótulo para "40-59%") ou manter como está? **Decisor: Fernando.**
-
-  **Subtarefas**:
-  - [ ] Migration recriando `raven_resultados_detalhe` com o limite decidido
-  - [ ] Ajustar os rótulos das faixas para refletirem os limites reais
-  - [ ] Atualizar a seção 8.4 do PRD com a decisão
-
-  **Arquivos relevantes**:
-  - migration no projeto `qyrkyvoilfaxppbvtkpi`
-  - `PRD/PRD.md`
-
-  **Verificação**:
-  - [ ] Linha com exatamente 24 acertos retorna a classificação decidida
-  - [ ] Linha com 23 e com 25 acertos continuam nas faixas corretas
-
-  **Commit**: `fix: align 40% classification boundary with its label`
-
----
-
-- [ ] **Slice 6: Política de retenção de dados de candidatos** [Bloqueante]
-
-  **Demo**: registros de candidatos mais antigos que o prazo definido deixam de existir na base.
-
-  **Camadas**: schema + job
-
-  **Bloqueado por**: Nenhum tecnicamente — aguarda decisão
-
-  **Decisão pendente**: por quanto tempo guardar nome, email e telefone de candidatos não
-  contratados? Relevante para LGPD — hoje não há prazo definido e os dados ficam indefinidamente.
-  Também decidir se é exclusão total ou anonimização (preservando as pontuações para estatística).
-  **Decisor: Fernando.**
-
-  **Subtarefas**:
-  - [ ] Definir prazo e modalidade (exclusão vs anonimização)
-  - [ ] Função SQL de expurgo com o critério decidido
-  - [ ] Agendar via `pg_cron` no Supabase
-  - [ ] Documentar a política no README
-
-  **Arquivos relevantes**:
-  - migration no projeto `qyrkyvoilfaxppbvtkpi`
-  - `README.md`
-
-  **Verificação**:
-  - [ ] Linha com `created_at` além do prazo é removida/anonimizada ao rodar a função
-  - [ ] Linha dentro do prazo permanece intacta
-  - [ ] O job aparece agendado em `cron.job`
-
-  **Commit**: `feat: add candidate data retention policy`
-
----
-
-- [ ] **Slice 7: Candidato recebe o resultado por email** [Bloqueante]
-
-  **Demo**: ao concluir o teste, o candidato recebe no email um resumo com pontuação e desempenho por série.
-
-  **Camadas**: API + integração + teste
-
-  **Bloqueado por**: Slice 1 (a suíte de testes precisa existir antes de acoplar um serviço externo)
-
-  **Decisão pendente**: qual provedor (Resend, SES, outro) e qual domínio remetente — exige
-  domínio verificado com SPF/DKIM. Também definir se o email sai de forma síncrona na conclusão
-  ou por fila, para que uma falha no provedor não bloqueie a tela do candidato. **Decisor: Fernando.**
-
-  > Removido do escopo da v1 por decisão de 2026-07-24. As telas foram ajustadas para
-  > não prometerem email enquanto isso não existir — ver PRD seção 9b.
-
-  **Subtarefas**:
-  - [ ] Configurar provedor e verificar domínio remetente
-  - [ ] Template do email com pontuação, percentual e desempenho por série
-  - [ ] Disparo após a gravação bem-sucedida, sem bloquear a resposta ao candidato
-  - [ ] Restaurar a copy de "você receberá um email" nas telas
-  - [ ] Teste: falha no provedor não faz o `POST /api/resultados` retornar erro
-
-  **Arquivos relevantes**:
-  - `app/api/resultados/route.js`
-  - `lib/email.js`
-  - `app/page.js`, `app/instrucoes/page.js`, `app/resultado/page.js`
-
-  **Verificação**:
-  - [ ] Teste completo entrega email na caixa de entrada (não em spam)
-  - [ ] Derrubar o provedor não impede a gravação nem quebra a tela final
-  - [ ] O resultado gravado continua sendo a fonte de verdade do que o email informa
-
-  **Commit**: `feat: email test results to candidate after completion`
-
----
-
-- [ ] **Slice 8: RH é notificado quando um teste é concluído** [Direto]
-
-  **Demo**: ao concluir um teste, o RH recebe um email com nome, pontuação e link para o dashboard.
-
-  **Camadas**: API + integração
-
-  **Bloqueado por**: Slice 7 (reaproveita provedor e infraestrutura de envio)
-
-  **Subtarefas**:
-  - [ ] Variável `RH_NOTIFICACAO_EMAIL` (fora de `NEXT_PUBLIC_`)
-  - [ ] Email curto com nome, pontuação, classificação e link para `/relatorios`
-  - [ ] Não enviar se a variável não estiver configurada
-
-  **Arquivos relevantes**:
-  - `lib/email.js`
-  - `app/api/resultados/route.js`
-  - `.env.example`
-
-  **Verificação**:
-  - [ ] Concluir um teste dispara o email para o endereço configurado
-  - [ ] Sem a variável configurada, a gravação segue normal e nada é enviado
-
-  **Commit**: `feat: notify HR by email on test completion`
-
----
+| Item | Por quê |
+|---|---|
+| **Envio de email ao candidato e ao RH** | Decidido em 2026-07-24: não haverá email nesta fase. As telas já não prometem. Reabrir exige escolher provedor e verificar domínio remetente com SPF/DKIM |
 
 ## Questões ainda sem slice
 
