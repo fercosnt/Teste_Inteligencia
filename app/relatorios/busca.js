@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Search, X } from 'lucide-react'
+import { Search, X, Download } from 'lucide-react'
 import { ORDEM_PADRAO, DIRECAO_PADRAO, construirHref } from '@/lib/relatorios-query'
 
 // Formulário GET puro: o termo vai parar na URL, então recarregar, favoritar ou
@@ -48,6 +48,17 @@ export default function Busca({ busca, ordem, direcao, total }) {
           {total} {total === 1 ? 'candidato encontrado' : 'candidatos encontrados'}
         </span>
       )}
+
+      {/* Leva a busca e a ordenação junto: o arquivo é o que está na tela. */}
+      <Link
+        href={construirHref({ busca, ordem, direcao, base: '/api/resultados/export' })}
+        prefetch={false}
+        className="ml-auto inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-colors"
+      >
+        <Download className="w-4 h-4" />
+        Exportar CSV
+        {busca && <span className="text-gray-400 font-normal">(filtrado)</span>}
+      </Link>
     </div>
   )
 }
