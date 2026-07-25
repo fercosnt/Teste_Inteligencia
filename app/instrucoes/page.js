@@ -157,8 +157,8 @@ export default function Instrucoes() {
                     <strong>Tempo:</strong> Ao clicar em "Iniciar Teste", o cronômetro começará automaticamente.
                   </p>
                   <p className="text-gray-700 mt-2">
-                    <strong>Resultado:</strong> Após finalizar, você verá sua pontuação e receberá
-                    os resultados detalhados por email.
+                    <strong>Resultado:</strong> Após finalizar, você verá sua pontuação na tela e ela
+                    ficará registrada para a equipe de recrutamento.
                   </p>
                 </div>
               </div>

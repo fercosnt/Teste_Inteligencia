@@ -163,7 +163,7 @@ export default function Home() {
               • Tempo: Cronometrado (sem limite)
               <br />
               • Navegação: Não é possível voltar
-              <br />• Resultado enviado por email
+              <br />• Resultado: exibido na tela ao final
             </p>
           </div>
         </CardContent>
