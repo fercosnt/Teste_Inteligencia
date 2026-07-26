@@ -14,10 +14,12 @@ O resumo do que importa para continuar:
 | | |
 |---|---|
 | `main` | `80fe0b6`, tudo publicado |
-| Testes | 133, `npm test` |
+| Testes | 157, `npm test` |
 | Gabarito | conferido 60/60 contra o PDF oficial; vive em [lib/gabarito-servidor.js](../lib/gabarito-servidor.js) atrás de `server-only` |
 | Dashboard | [app/relatorios/page.js](../app/relatorios/page.js) — lista; ficha em [app/relatorios/[id]/page.js](../app/relatorios/[id]/page.js) |
 | Escala | normativa do SPM, por acertos, em `raven_classificacao()` no banco |
+| Base | 50 candidatos / 55 testes — 49 pessoas importadas do Airtable em 2026-07-26 |
+| Retenção | 2 anos, em `raven_retencao_intervalo()` |
 | Material do teste | `material-teste/` — **fora do git**, só existe nesta máquina |
 | Imagens das questões | 60/60 conferidas à mão contra o PDF em 2026-07-26, sem divergência |
 
@@ -157,6 +159,105 @@ pedir o gabarito ao servidor — `supabase.rpc('raven_gabarito')` — em vez de 
 **Cuidado ao verificar contra o runtime**: subir um segundo `npm start` sem matar o primeiro
 deixa o servidor velho no ar servindo um `.next` que já foi sobrescrito. O sintoma é a página vir
 sem CSS nenhum e com classes de uma versão anterior — o que parece bug da mudança e não é.
+
+</details>
+
+---
+
+## Frente C — tentativas, exclusão e o fim do reenvio ✅ CONCLUÍDA em 2026-07-26
+
+### O bug que estava rodando
+
+A tela de resultado **regravava o teste a cada visita**. O `localStorage` nunca era limpo depois
+de gravar, então um F5 remontava o componente e reenviava o mesmo payload; a API sempre fazia
+`insert`, e o índice de email não era único.
+
+Não era hipótese. **48 das 102 linhas do Airtable eram isso** — um candidato tinha 29 cópias do
+mesmo teste (mesmo tempo, mesma nota, `Created_Time` espalhado por duas semanas). No sistema novo
+já havia gerado 2 linhas extras, nascidas enquanto o dashboard era conferido.
+
+O conserto tem três camadas, e a do meio é a que segura se as outras falharem:
+
+| Camada | O quê |
+|---|---|
+| Tela | grava um comprovante e apaga as chaves do teste; uma recarga mostra a nota, não reenvia |
+| Banco | índice único `(email, data_inicio)` |
+| API | traduz o `23505` para "já registrado" com **200** |
+
+O 200 importa: um 500 faria a tela dizer "falha ao gravar" a um candidato cujo teste **está**
+salvo — e candidato que vê falha tenta de novo.
+
+**A chave `(email, data_inicio)` separa reenvio de refação.** Reenviar repete o `data_inicio`
+(vem do `localStorage`); refazer passa por `/instrucoes`, que grava um novo. A trava barra um sem
+fechar a porta do outro.
+
+### Tentativas: a primeira é a que vale
+
+`raven_resultados_detalhe` numera as sessões de cada pessoa e marca a primeira como `vale`;
+`raven_candidatos` entrega uma linha por candidato. **A lista, os agregados e o export leem daí.**
+Antes "Candidatos" contava tentativas, e quem repetia pesava mais na média da base — que é
+justamente a régua contra a qual a ficha compara todos os outros.
+
+A razão de ser a primeira não é arbitrária. As seguintes não são medidas melhores, são medidas
+contaminadas: a pessoa já viu as matrizes. Nos três repetentes do histórico a nota subiu nas três,
+e um caso resume tudo:
+
+```
+luciana martins   1ª  21/01 12:56   45/60  🟡 Superior      <- é esta que vale
+                  2ª  21/01 23:09   46/60  🟡 Superior
+                  3ª  22/01 15:00   56/60  🟢 Muito superior
+                  4ª  04/02 22:44   52/60  🟡 Superior
+```
+
+**+11 acertos em 26 horas**, cruzando de faixa. Contar a maior ou a mais recente faria o RH ler
+uma pessoa que não existe.
+
+### Exclusão
+
+Definitiva, em dois escopos — uma tentativa ou o candidato inteiro — com confirmação que lista o
+que será perdido.
+
+**A rota vive sob `/api/admin`, e isso não é estética.** O matcher do middleware é estreito de
+propósito para `/api/resultados` continuar público (é por onde o candidato grava). Uma rota de
+exclusão sob esse prefixo só seria protegida com `:path*`, que casaria também com a gravação e
+**trancaria o teste para todo mundo**. Num prefixo separado, toda rota administrativa nasce
+fechada. Há teste que quebra se alguém "simplificar" o matcher.
+
+### Retenção e anonimização
+
+Passou para 2 anos, com o prazo extraído para `raven_retencao_intervalo()`. Antes só dava para
+conferir o prazo rodando `raven_anonimizar_antigos()`, que reescreve a tabela inteira — e nenhuma
+suíte de testes pode disparar o ciclo de vida de dado pessoal real.
+
+O email anonimizado passou a ser **pseudônimo estável por pessoa** (`md5('raven:' || email)`). Era
+por linha; assim, no dia em que fossem anonimizadas, as tentativas de um mesmo candidato virariam
+pessoas diferentes, e a regra de "só a primeira conta" passaria a contar todas, sem aviso.
+
+### A importação do histórico
+
+49 pessoas / 54 sessões vindas do Airtable, deduplicadas por `(email, data_inicio)`.
+
+- **Pontuação não foi importada.** O banco recalcula das respostas. Trazer o número pronto criaria
+  uma segunda fonte de verdade capaz de divergir do gabarito em silêncio.
+- **As 54 conferiram com o Airtable, sem uma divergência.** Confirmação forte de que os dois
+  sistemas pontuam igual, o que importa porque este gabarito passou pela correção da Q53.
+- `created_at` recebeu a data real do teste, então o relógio de retenção conta de quando a pessoa
+  fez a prova — e não de quando a linha entrou.
+
+<details>
+<summary>Como o histórico foi extraído, se precisar refazer</summary>
+
+Scripts em `scratchpad/airtable/` (fora do git, contêm dados pessoais). O caminho que funcionou:
+
+1. **CSV do Airtable dá 403** em view compartilhada, e a API responde **MessagePack** num formato
+   de stream proprietário — 15.961 tokens que não valem reconstruir.
+2. O que funcionou foi ler a grade **por `(rowid, columnid)`, nos dois eixos**. A grade é
+   virtualizada nas duas direções; ler por posição dá um resultado que parece certo e não é. Uma
+   primeira tentativa só na vertical devolveu 91 registros — o número real era 102.
+3. O raspador **confere a completude** ao final e falha se algum campo não estiver 100%. Foi essa
+   checagem que pegou a leitura parcial.
+
+Se for refazer uma migração, um CSV exportado à mão continua sendo entrada melhor que raspagem.
 
 </details>
 
