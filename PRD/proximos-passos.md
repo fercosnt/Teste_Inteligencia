@@ -19,6 +19,7 @@ O resumo do que importa para continuar:
 | Dashboard | [app/relatorios/page.js](../app/relatorios/page.js) — lista + acordeão inline |
 | Escala | normativa do SPM, por acertos, em `raven_classificacao()` no banco |
 | Material do teste | `material-teste/` — **fora do git**, só existe nesta máquina |
+| Imagens das questões | 60/60 conferidas à mão contra o PDF em 2026-07-26, sem divergência |
 
 **Cuidado que não pode se perder**: o gabarito não pode voltar para o bundle do cliente.
 A trava é o `import 'server-only'`; se um componente `'use client'` importar aquele módulo, o
@@ -26,12 +27,23 @@ build falha. Isso é proposital — já vazou uma vez.
 
 ---
 
-## Frente A — auditoria figura a figura (manual)
+## Frente A — auditoria figura a figura ✅ CONCLUÍDA em 2026-07-26
+
+**Resultado**: as 60 questões foram conferidas manualmente pelo Fernando, figura a figura,
+contra o PDF oficial. **Nenhuma divergência.** Com isso cai a última ressalva que vinha sendo
+carregada desde a correção da Q53 — o conjunto de imagens está íntegro e alinhado com o
+material oficial, e não só na contagem.
+
+Não há o que refazer aqui. O registro abaixo fica para reproduzir a conferência se as imagens
+mudarem no futuro.
+
+<details>
+<summary>Como a auditoria foi feita</summary>
 
 **Por quê**: a conferência automática foi feita só por *contagem* de opções nas 60 questões.
 Isso pega o tipo de falha da Q53 (arquivo faltando, numeração deslocada), mas **não pegaria
 duas imagens trocadas entre si** numa questão com a contagem certa. Q12, Q29 e Q53 foram
-conferidas à mão; as outras 57, não.
+conferidas à mão durante a correção; as outras 57 ficaram pendentes até esta auditoria.
 
 Tentei automatizar duas vezes comparando pixels e **descartei os dois resultados** — o contorno
 da etiqueta é idêntico em toda opção e dominava a métrica, produzindo ~150 falsos positivos.
@@ -54,6 +66,8 @@ Regenerar (se as imagens mudarem): `node scripts/folhas-auditoria.js` — precis
 dependendo do caso — as duas já foram feitas e ficaram registradas no commit `8d13462`:
 - imagem faltando ou numeração deslocada → extrair do PDF e renumerar (foi o caso da Q53)
 - arquivo a mais que o PDF não tem → apagar (foi o caso da Q12)
+
+</details>
 
 ---
 
