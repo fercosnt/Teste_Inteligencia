@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { gabarito, calcularPontuacao, series } from '@/lib/quiz-data'
+import { series } from '@/lib/quiz-data'
+import { gabarito, calcularPontuacao } from '@/lib/gabarito-servidor'
 
 // Testes da fronteira de confiança do sistema (PRD seção 7b).
 //

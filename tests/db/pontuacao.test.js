@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
-import { gabarito, series } from '@/lib/quiz-data'
+import { series } from '@/lib/quiz-data'
+import { gabarito } from '@/lib/gabarito-servidor'
 
 // Testes do coração do sistema: o gabarito e a contagem de acertos, que vivem
 // dentro do Postgres (PRD seção 8.2). Só leem — chamam as funções IMMUTABLE via

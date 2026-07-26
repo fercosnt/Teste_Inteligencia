@@ -8,7 +8,7 @@ import { Progress } from '@/components/ui/progress'
 import { Trophy, Clock, Target, Mail, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import Image from 'next/image'
-import { calcularPontuacao, TOTAL_QUESTOES } from '@/lib/quiz-data'
+import { TOTAL_QUESTOES } from '@/lib/quiz-data'
 
 // Helper para logging condicional (apenas em desenvolvimento)
 const isDev = process.env.NODE_ENV === 'development'
@@ -49,6 +49,8 @@ export default function Resultado() {
   const [enviando, setEnviando] = useState(true)
   const [enviado, setEnviado] = useState(false)
   const [erro, setErro] = useState(null)
+  // Vem da resposta de /api/resultados — o cliente não sabe calcular isto.
+  const [pontuacao, setPontuacao] = useState(null)
   const enviadoRef = useRef(false)
 
   const enviarResultado = async (dados) => {
@@ -56,9 +58,9 @@ export default function Resultado() {
     setErro(null)
 
     try {
-      // Enviamos apenas os dados crus. A pontuação é recalculada pelo banco a
-      // partir do gabarito, que nunca sai do servidor — o número exibido nesta
-      // tela é só para o candidato ver na hora. Ver PRD seção 8.2.
+      // Enviamos apenas os dados crus e recebemos a nota de volta. O gabarito
+      // vive só no banco (raven_gabarito/raven_acertos) e em
+      // lib/gabarito-servidor.js — nunca no bundle. Ver PRD seção 8.2.
       const response = await fetch('/api/resultados', {
         method: 'POST',
         headers: {
@@ -84,6 +86,12 @@ export default function Resultado() {
       const responseData = await response.json().catch(() => ({}))
       log('✅ Resultado gravado:', responseData)
 
+      // A nota exibida é a que o banco calculou, não uma conta feita aqui.
+      // É o que permite o gabarito não existir no bundle do cliente.
+      setPontuacao({
+        pontuacao: responseData.pontuacao,
+        percentual: responseData.percentual,
+      })
       setEnviado(true)
     } catch (error) {
       logError('❌ Erro ao gravar resultado:', error)
@@ -109,10 +117,6 @@ export default function Resultado() {
       const candidato = JSON.parse(candidatoStr)
       const respostas = JSON.parse(respostasStr)
 
-      // Calcular pontuação
-      const pontuacao = calcularPontuacao(respostas)
-      const percentual = ((pontuacao / TOTAL_QUESTOES) * 100).toFixed(2)
-
       // Calcular tempo total
       const inicio = new Date(dataInicio)
       const fim = new Date(dataFim)
@@ -128,8 +132,6 @@ export default function Resultado() {
         dataFim,
         tempoTotalMinutos: parseFloat(tempoTotalMinutos),
         tempoTotalSegundos,
-        pontuacao,
-        percentualAcertos: parseFloat(percentual),
         respostas
       }
 
@@ -240,20 +242,23 @@ export default function Resultado() {
               </Alert>
             )}
 
-            {/* Resultado Principal — número puro, sem rótulo de desempenho. */}
-            <div className="text-center py-6">
-              <div className="space-y-2">
-                <div>
-                  <div className="text-6xl font-bold mb-2">{resultado.pontuacao}</div>
-                  <div className="text-gray-600">de {TOTAL_QUESTOES} questões corretas</div>
-                </div>
+            {/* Resultado Principal — número puro, sem rótulo de desempenho.
+                Só aparece quando o banco responde: é ele quem sabe a nota. */}
+            {pontuacao && (
+              <div className="text-center py-6">
+                <div className="space-y-2">
+                  <div>
+                    <div className="text-6xl font-bold mb-2">{pontuacao.pontuacao}</div>
+                    <div className="text-gray-600">de {TOTAL_QUESTOES} questões corretas</div>
+                  </div>
 
-                <div className="mt-4">
-                  <Progress value={parseFloat(resultado.percentualAcertos)} className="h-3 max-w-md mx-auto" />
-                  <p className="text-2xl text-cyan-600 mt-2 font-semibold">{resultado.percentualAcertos}%</p>
+                  <div className="mt-4">
+                    <Progress value={Number(pontuacao.percentual)} className="h-3 max-w-md mx-auto" />
+                    <p className="text-2xl text-cyan-600 mt-2 font-semibold">{pontuacao.percentual}%</p>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Estatísticas */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -278,9 +283,13 @@ export default function Resultado() {
                     <Target className="w-6 h-6 text-purple-600 mt-1" />
                     <div>
                       <p className="text-sm text-gray-600">Taxa de Acerto</p>
-                      <p className="text-xl font-semibold">{resultado.percentualAcertos}%</p>
+                      <p className="text-xl font-semibold">
+                        {pontuacao ? `${pontuacao.percentual}%` : '—'}
+                      </p>
                       <p className="text-sm text-gray-500 mt-1">
-                        {resultado.pontuacao} de {TOTAL_QUESTOES} corretas
+                        {pontuacao
+                          ? `${pontuacao.pontuacao} de ${TOTAL_QUESTOES} corretas`
+                          : 'aguardando o registro'}
                       </p>
                     </div>
                   </div>
