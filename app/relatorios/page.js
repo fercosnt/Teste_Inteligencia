@@ -218,12 +218,18 @@ function LinhaCandidato({ c }) {
           </div>
           <div className="col-span-3 sm:col-span-3 text-xs">
             <span className="tabular-nums font-medium mr-2">{c.percentual_acertos}%</span>
-            <span className="text-gray-600">{c.classificacao}</span>
+            <span className="text-gray-600" title={c.classificacao_descricao}>
+              {c.classificacao}
+            </span>
           </div>
         </div>
       </summary>
 
       <div className="px-4 pb-5 pt-1 bg-gray-50/60 space-y-5">
+        <p className="text-xs text-gray-600 border-l-2 border-gray-300 pl-3">
+          <span className="font-medium">{c.classificacao}</span> — {c.classificacao_descricao}
+        </p>
+
         <div className="grid gap-3 sm:grid-cols-2">
           {seriesDoCandidato.map((s) => (
             <BarraSerie key={s.letra} {...s} />
@@ -373,13 +379,18 @@ export default async function Relatorios({ searchParams }) {
 
                   <Card>
                     <CardHeader className="pb-3">
-                      <CardTitle className="text-base">Distribuição por classificação</CardTitle>
+                      <CardTitle className="text-base">
+                      Distribuição por classificação
+                      <span className="block text-xs font-normal text-gray-500 mt-1">
+                        Escala normativa do SPM, por acertos
+                      </span>
+                    </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-3">
                       {dados.classificacao.map((faixa) => (
                         <div key={faixa.classificacao}>
                           <div className="flex justify-between items-baseline text-sm mb-1">
-                            <span>{faixa.classificacao}</span>
+                            <span title={faixa.classificacao_descricao}>{faixa.classificacao}</span>
                             <span className="tabular-nums text-gray-600">
                               {faixa.total} ({faixa.percentual_do_total}%)
                             </span>

@@ -156,14 +156,13 @@ export default function Resultado() {
     return `${String(horas).padStart(2, '0')}:${String(minutos).padStart(2, '0')}:${String(segs).padStart(2, '0')}`
   }
 
-  const getNivelDesempenho = (percentual) => {
-    const perc = parseFloat(percentual)
-    if (perc >= 90) return { texto: 'Excelente', cor: 'text-green-600', bg: 'bg-green-50' }
-    if (perc >= 75) return { texto: 'Muito Bom', cor: 'text-cyan-600', bg: 'bg-cyan-50' }
-    if (perc >= 60) return { texto: 'Bom', cor: 'text-purple-600', bg: 'bg-purple-50' }
-    if (perc >= 50) return { texto: 'Regular', cor: 'text-amber-600', bg: 'bg-amber-50' }
-    return { texto: 'Precisa Melhorar', cor: 'text-red-600', bg: 'bg-red-50' }
-  }
+  // A classificação de desempenho saiu daqui de propósito.
+  //
+  // Interpretar a pontuação é leitura do RH, com a escala normativa do teste
+  // (ver raven_classificacao no banco) — e ela vive só no dashboard. Além
+  // disso, o rótulo que existia aqui usava faixas próprias, diferentes das do
+  // banco: um candidato com 45% lia "Precisa Melhorar" na tela enquanto o
+  // dashboard o mostrava como "Regular". Duas réguas para o mesmo número.
 
   if (!resultado) {
     return (
@@ -175,8 +174,6 @@ export default function Resultado() {
       </div>
     )
   }
-
-  const nivel = getNivelDesempenho(resultado.percentualAcertos)
 
   return (
     <div
@@ -243,13 +240,8 @@ export default function Resultado() {
               </Alert>
             )}
 
-            {/* Resultado Principal */}
+            {/* Resultado Principal — número puro, sem rótulo de desempenho. */}
             <div className="text-center py-6">
-              <div className={`inline-flex items-center gap-2 px-6 py-3 rounded-full ${nivel.bg} mb-4`}>
-                <Trophy className={`w-6 h-6 ${nivel.cor}`} />
-                <span className={`${nivel.cor} font-semibold`}>{nivel.texto}</span>
-              </div>
-
               <div className="space-y-2">
                 <div>
                   <div className="text-6xl font-bold mb-2">{resultado.pontuacao}</div>

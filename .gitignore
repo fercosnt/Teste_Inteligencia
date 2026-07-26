@@ -33,3 +33,7 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Material licenciado do teste + gabarito. Nunca versionar nem servir:
+# em public/ o Next entrega isso por HTTP para qualquer um.
+material-teste/

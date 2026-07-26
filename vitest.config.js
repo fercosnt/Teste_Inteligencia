@@ -15,5 +15,10 @@ export default defineConfig({
     environment: 'node',
     include: ['tests/**/*.test.js'],
     env,
+    // Os testes de tests/db falam com o Supabase pela rede. O padrão de 5s
+    // basta num dia bom e falha por timeout quando o projeto está frio — o que
+    // vira ruído: o teste "quebra" sem nada ter quebrado.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
   },
 })
