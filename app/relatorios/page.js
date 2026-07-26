@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase-server'
-import { gabarito, series } from '@/lib/quiz-data'
+import { series } from '@/lib/quiz-data'
+import { gabarito } from '@/lib/gabarito-servidor'
 import {
   ORDENS,
   normalizarBusca,

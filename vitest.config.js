@@ -9,7 +9,15 @@ const env = loadEnv('', process.cwd(), '')
 
 export default defineConfig({
   resolve: {
-    alias: { '@': path.resolve(process.cwd()) },
+    alias: {
+      '@': path.resolve(process.cwd()),
+      // `server-only` lança ao ser importado fora de um Server Component — é
+      // essa explosão que impede o gabarito de voltar para o bundle. O Next
+      // resolve o pacote pela condição "react-server", que aponta para um
+      // módulo vazio; o Vitest não, então apontamos na mão. Os testes rodam no
+      // servidor, então importar gabarito-servidor.js aqui é legítimo.
+      'server-only': path.resolve(process.cwd(), 'node_modules/server-only/empty.js'),
+    },
   },
   test: {
     environment: 'node',

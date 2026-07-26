@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import { createClient } from '@supabase/supabase-js'
-import { gabarito, series } from '@/lib/quiz-data'
+import { series } from '@/lib/quiz-data'
+import { gabarito } from '@/lib/gabarito-servidor'
 import { aplicarFiltros, normalizarOrdem } from '@/lib/relatorios-query'
 
 // Busca e ordenação contra o Postgres de verdade.
