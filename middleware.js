@@ -40,5 +40,11 @@ export const config = {
   // O export entrega a mesma planilha de dados pessoais que o dashboard mostra,
   // então passa pela mesma porta. A rota é listada de forma exata de propósito:
   // /api/resultados, por onde o candidato grava o teste, tem que ficar aberta.
-  matcher: ['/relatorios/:path*', '/api/resultados/export'],
+  //
+  // /api/admin existe por causa dessa exceção. Uma rota de exclusão sob
+  // /api/resultados/... não teria como ser protegida sem `:path*`, e `:path*`
+  // casa também com /api/resultados — o que trancaria a gravação do candidato
+  // e derrubaria o teste inteiro. Num prefixo separado, tudo que for de
+  // administração nasce fechado, sem precisar lembrar de listar cada rota.
+  matcher: ['/relatorios/:path*', '/api/resultados/export', '/api/admin/:path*'],
 }

@@ -6,6 +6,7 @@ import {
   aplicarFiltros,
   construirHref,
   proximaDirecao,
+  TABELA_LISTA,
 } from '@/lib/relatorios-query'
 import { formatarDataHora, formatarDuracao, formatarNumero } from '@/lib/relatorios-candidato'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -41,7 +42,7 @@ async function carregarDados({ busca, ordenacao }) {
   const [resumo, classificacao, candidatos] = await Promise.all([
     supabase.from('raven_dashboard_resumo').select('*').single(),
     supabase.from('raven_dashboard_classificacao').select('*'),
-    aplicarFiltros(supabase.from('raven_resultados_detalhe').select('*'), { busca, ordenacao }),
+    aplicarFiltros(supabase.from(TABELA_LISTA).select('*'), { busca, ordenacao }),
   ])
 
   const erro = resumo.error || classificacao.error || candidatos.error
@@ -89,7 +90,8 @@ function CabecalhoTabela({ busca, ordenacao }) {
       <CabecalhoOrdenavel chave="data" className="col-span-2" {...props} />
       <CabecalhoOrdenavel chave="tempo" className="col-span-2" {...props} />
       <CabecalhoOrdenavel chave="pontuacao" className="col-span-1" {...props} />
-      <div className="col-span-3 text-gray-500">Classificação</div>
+      <CabecalhoOrdenavel chave="testes" className="col-span-1" {...props} />
+      <div className="col-span-2 text-gray-500">Classificação</div>
     </div>
   )
 }
@@ -124,7 +126,21 @@ function LinhaCandidato({ c, busca, ordenacao }) {
         <div className="col-span-2 sm:col-span-1 tabular-nums font-semibold">
           {c.pontuacao_total}/60
         </div>
-        <div className="col-span-3 sm:col-span-3 text-xs">
+        <div className="col-span-2 sm:col-span-1 text-xs tabular-nums">
+          {c.total_tentativas > 1 ? (
+            // Quem repetiu ganha destaque: os números da linha são da primeira
+            // tentativa, e saber que existem outras muda como se lê a ficha.
+            <span
+              className="inline-flex items-center rounded-full bg-amber-100 text-amber-900 px-2 py-0.5 font-medium"
+              title={`Fez o teste ${c.total_tentativas} vezes. A linha mostra a 1ª — a única sem efeito de prática.`}
+            >
+              {c.total_tentativas}
+            </span>
+          ) : (
+            <span className="text-gray-400">1</span>
+          )}
+        </div>
+        <div className="col-span-3 sm:col-span-2 text-xs">
           <span className="tabular-nums font-medium mr-2">
             {formatarNumero(c.percentual_acertos)}%
           </span>
@@ -215,6 +231,14 @@ export default async function Relatorios({ searchParams }) {
                     rotulo="Candidatos"
                     valor={dados.resumo.total_candidatos}
                     cor={{ bg: 'bg-cyan-50', border: 'border-cyan-200', texto: 'text-cyan-600' }}
+                    // O total bruto só aparece quando difere: dizer "12 testes"
+                    // embaixo de "12 candidatos" seria ruído. Quando difere,
+                    // explica por que a lista tem menos linhas que testes feitos.
+                    detalhe={
+                      dados.resumo.total_tentativas > dados.resumo.total_candidatos
+                        ? `${dados.resumo.total_tentativas} testes — alguns candidatos repetiram`
+                        : null
+                    }
                   />
                   <CardMetrica
                     icone={Clock}

@@ -8,7 +8,7 @@ import { Progress } from '@/components/ui/progress'
 import { Trophy, Clock, Target, Mail, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import Image from 'next/image'
-import { TOTAL_QUESTOES } from '@/lib/quiz-data'
+import { TOTAL_QUESTOES, CHAVE_COMPROVANTE } from '@/lib/quiz-data'
 
 // Helper para logging condicional (apenas em desenvolvimento)
 const isDev = process.env.NODE_ENV === 'development'
@@ -40,6 +40,23 @@ const setLocalStorageItem = (key, value) => {
   } catch (error) {
     logError('Erro ao salvar no localStorage:', error)
     return false
+  }
+}
+
+// Chaves que descrevem um teste em andamento. Enquanto elas existirem, esta
+// tela entende que há resultado novo para gravar.
+const CHAVES_DO_TESTE = ['candidato', 'respostas', 'dataInicio', 'dataFim']
+
+// CHAVE_COMPROVANTE vem de lib/quiz-data.js: /instrucoes precisa da mesma
+// constante para apagá-la quando um teste novo começa.
+
+const limparTeste = () => {
+  for (const chave of CHAVES_DO_TESTE) {
+    try {
+      localStorage.removeItem(chave)
+    } catch (error) {
+      logError('Erro ao limpar o localStorage:', error)
+    }
   }
 }
 
@@ -88,10 +105,20 @@ export default function Resultado() {
 
       // A nota exibida é a que o banco calculou, não uma conta feita aqui.
       // É o que permite o gabarito não existir no bundle do cliente.
-      setPontuacao({
+      const nota = {
         pontuacao: responseData.pontuacao,
         percentual: responseData.percentual,
-      })
+        tempoTotalSegundos: dados.tempoTotalSegundos,
+        nome: dados.nome,
+      }
+
+      // Guarda o comprovante e apaga o teste ANTES de mostrar a nota. É esta
+      // troca que fecha o reenvio: sem as chaves do teste, uma recarga desta
+      // tela não tem o que gravar, e cai no comprovante.
+      setLocalStorageItem(CHAVE_COMPROVANTE, JSON.stringify(nota))
+      limparTeste()
+
+      setPontuacao(nota)
       setEnviado(true)
     } catch (error) {
       logError('❌ Erro ao gravar resultado:', error)
@@ -103,6 +130,26 @@ export default function Resultado() {
 
   useEffect(() => {
     try {
+      // Teste já gravado: esta visita é uma recarga, não um envio. Mostra o
+      // comprovante e não toca na API — é o que impede a mesma execução de
+      // virar duas linhas no banco.
+      const comprovanteStr = getLocalStorageItem(CHAVE_COMPROVANTE)
+      if (comprovanteStr) {
+        const comprovante = JSON.parse(comprovanteStr)
+        setPontuacao(comprovante)
+        setResultado({
+          nome: comprovante.nome,
+          tempoTotalSegundos: comprovante.tempoTotalSegundos,
+          // Derivado aqui e não guardado no comprovante: um campo a menos para
+          // esquecer de gravar. Sem ele a tela imprimia "NaN minutos".
+          tempoTotalMinutos: comprovante.tempoTotalSegundos / 60,
+        })
+        enviadoRef.current = true
+        setEnviado(true)
+        setEnviando(false)
+        return
+      }
+
       // Verificar dados com tratamento de erro
       const candidatoStr = getLocalStorageItem('candidato')
       const respostasStr = getLocalStorageItem('respostas')

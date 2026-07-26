@@ -20,6 +20,8 @@ import CardMetrica from '../componentes/card-metrica'
 import BarraSerie from '../componentes/barra-serie'
 import DetalheQuestoes from '../componentes/detalhe-questoes'
 import ReguaClassificacao from '../componentes/regua-classificacao'
+import Tentativas from '../componentes/tentativas'
+import Excluir from '../componentes/excluir'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,10 +52,25 @@ async function carregarCandidato(id) {
   const erro = resumo.error || escala.error
   if (erro) throw new Error(erro.message)
 
+  // As outras tentativas da mesma pessoa. Só busca quando existem — o caso
+  // comum é uma tentativa só, e uma consulta a mais por ficha não se paga.
+  let tentativas = [candidato.data]
+  if (candidato.data.total_tentativas > 1) {
+    const outras = await supabase
+      .from('raven_resultados_detalhe')
+      .select('id, nome, email, data_inicio, pontuacao_total, classificacao, tentativa, vale')
+      .eq('email', candidato.data.email)
+      .order('tentativa')
+
+    if (outras.error) throw new Error(outras.error.message)
+    tentativas = outras.data ?? tentativas
+  }
+
   return {
     candidato: candidato.data,
     resumo: resumo.data,
     escala: escala.data ?? [],
+    tentativas,
   }
 }
 
@@ -94,6 +111,10 @@ export default async function Candidato({ params, searchParams }) {
   // acabou de montar, que é o custo real de ter trocado o acordeão por uma rota.
   const voltar = construirHref({ busca, ordem: ordenacao.ordem, direcao: ordenacao.direcao })
 
+  // Mesma query, mas para pendurar em links entre tentativas — assim o "voltar"
+  // continua funcionando depois de navegar de uma tentativa para outra.
+  const consultaDaLista = voltar.includes('?') ? `?${voltar.split('?')[1]}` : ''
+
   let dados
   let erroCarregamento = null
 
@@ -106,6 +127,8 @@ export default async function Candidato({ params, searchParams }) {
   if (!erroCarregamento && !dados) notFound()
 
   const c = dados?.candidato
+  const tentativas = dados?.tentativas ?? []
+  const primeira = tentativas.find((t) => t.vale)
   const series = c ? montarSeries(c, dados.resumo) : []
   const tempo = c ? compararTempo(c.tempo_total_segundos, dados.resumo?.tempo_medio_minutos) : null
   const pontuacao = c ? compararPontuacao(c.pontuacao_total, dados.resumo?.pontuacao_media) : null
@@ -162,6 +185,29 @@ export default async function Candidato({ params, searchParams }) {
               </Alert>
             ) : (
               <>
+                {!c.vale && (
+                  // Abriu uma tentativa que não é a que conta. Sem este aviso a
+                  // tela mostraria uma nota com a mesma autoridade da válida,
+                  // sendo que esta já teve contato com as matrizes.
+                  <Alert className="border-amber-200 bg-amber-50">
+                    <AlertCircle className="h-5 w-5 text-amber-600" />
+                    <AlertDescription className="text-gray-700">
+                      <strong className="text-amber-800">
+                        Esta é a {c.tentativa}ª tentativa deste candidato.
+                      </strong>{' '}
+                      A nota que vale é a da 1ª — nesta ele já tinha visto as matrizes, e o
+                      resultado não entra nas médias da base.{' '}
+                      <Link
+                        href={`/relatorios/${primeira?.id ?? ''}${consultaDaLista}`}
+                        className="text-blue-700 underline"
+                      >
+                        Abrir a 1ª tentativa
+                      </Link>
+                      .
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <dl className="grid grid-cols-2 sm:grid-cols-4 gap-4 pb-4 border-b">
                   <Ficha rotulo="Telefone" valor={c.telefone} />
                   <Ficha rotulo="Iniciado em" valor={formatarDataHora(c.data_inicio)} />
@@ -284,6 +330,37 @@ export default async function Candidato({ params, searchParams }) {
                     </p>
                   </CardContent>
                 </Card>
+
+                {tentativas.length > 1 && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">
+                        Tentativas
+                        <span className="block text-xs font-normal text-gray-500 mt-1">
+                          Este candidato fez o teste {tentativas.length} vezes. Só a 1ª conta para
+                          a nota e para as médias
+                        </span>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Tentativas
+                        tentativas={tentativas}
+                        idAtual={c.id}
+                        voltar={consultaDaLista}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+
+                <div className="flex justify-end border-t pt-4 print:hidden">
+                  <Excluir
+                    id={c.id}
+                    nome={c.nome}
+                    email={c.email}
+                    escopo="candidato"
+                    totalTentativas={tentativas.length}
+                  />
+                </div>
               </>
             )}
           </CardContent>

@@ -1,5 +1,10 @@
 import { getSupabaseAdmin } from '@/lib/supabase-server'
-import { normalizarBusca, normalizarOrdem, aplicarFiltros } from '@/lib/relatorios-query'
+import {
+  normalizarBusca,
+  normalizarOrdem,
+  aplicarFiltros,
+  TABELA_LISTA,
+} from '@/lib/relatorios-query'
 import { gerarCsv, nomeArquivoCsv } from '@/lib/csv'
 
 export const dynamic = 'force-dynamic'
@@ -24,10 +29,14 @@ export async function GET(request) {
     return Response.json({ erro: 'Servidor não configurado' }, { status: 500 })
   }
 
-  const { data, error } = await aplicarFiltros(
-    supabase.from('raven_resultados_detalhe').select('*'),
-    { busca, ordenacao }
-  )
+  // Lê da mesma fonte da lista (TABELA_LISTA): uma linha por candidato, a
+  // primeira tentativa. O botão fica ao lado da lista e diz "filtrado" — se o
+  // arquivo trouxesse todas as tentativas, viria com mais linhas do que a tela
+  // mostra, e ninguém saberia por quê. O histórico completo está na ficha.
+  const { data, error } = await aplicarFiltros(supabase.from(TABELA_LISTA).select('*'), {
+    busca,
+    ordenacao,
+  })
 
   if (error) {
     console.error('[export] Falha ao ler os resultados:', error)

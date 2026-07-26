@@ -89,6 +89,36 @@ export async function POST(request) {
     .select('id, pontuacao_total, percentual_acertos')
     .single()
 
+  // 23505 = violação de unicidade. Aqui só pode ser o índice de sessão
+  // (email, data_inicio): esta execução já foi gravada, e o que chegou é um
+  // reenvio — uma recarga da tela de resultado, uma aba reaberta.
+  //
+  // Reenvio não é erro do candidato: o teste dele está salvo. Devolver 500
+  // faria a tela dizer "falha ao gravar" para quem já passou, e foi assim que
+  // um candidato acumulou 29 linhas do mesmo teste no sistema antigo. Então
+  // buscamos o que já está lá e respondemos como se tivesse acabado de gravar.
+  if (error?.code === '23505') {
+    const { data: existente, error: erroBusca } = await supabase
+      .from('raven_resultados')
+      .select('id, pontuacao_total, percentual_acertos')
+      .eq('email', body.email.trim().toLowerCase())
+      .eq('data_inicio', inicio.toISOString())
+      .maybeSingle()
+
+    if (!erroBusca && existente) {
+      return NextResponse.json(
+        {
+          id: existente.id,
+          pontuacao: existente.pontuacao_total,
+          percentual: existente.percentual_acertos,
+          jaRegistrado: true,
+        },
+        // 200 e não 201: nada foi criado agora.
+        { status: 200 }
+      )
+    }
+  }
+
   if (error) {
     console.error('[resultados] Falha ao gravar:', error)
     return NextResponse.json({ erro: 'Falha ao gravar o resultado' }, { status: 500 })

@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Brain, Clock, ArrowRight, AlertCircle, CheckCircle2 } from 'lucide-react'
 import Image from 'next/image'
+import { CHAVE_COMPROVANTE } from '@/lib/quiz-data'
 
 export default function Instrucoes() {
   const router = useRouter()
@@ -29,7 +30,14 @@ export default function Instrucoes() {
 
   const handleIniciar = () => {
     try {
-      // Iniciar cronômetro
+      // Comprovante do teste anterior sai de cena aqui. Sem isso, quem refaz o
+      // teste chegaria em /resultado, encontraria a nota antiga guardada e
+      // veria o resultado velho — o novo nunca seria enviado.
+      localStorage.removeItem(CHAVE_COMPROVANTE)
+
+      // Iniciar cronômetro. É este valor que identifica a sessão no banco
+      // (índice único email + data_inicio), então um teste novo aqui é um
+      // teste novo lá — e um reenvio do mesmo teste é barrado.
       const dataInicio = new Date().toISOString()
       localStorage.setItem('dataInicio', dataInicio)
 
