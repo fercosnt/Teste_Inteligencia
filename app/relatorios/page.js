@@ -1,6 +1,4 @@
 import { getSupabaseAdmin } from '@/lib/supabase-server'
-import { series } from '@/lib/quiz-data'
-import { gabarito } from '@/lib/gabarito-servidor'
 import {
   ORDENS,
   normalizarBusca,
@@ -9,6 +7,7 @@ import {
   construirHref,
   proximaDirecao,
 } from '@/lib/relatorios-query'
+import { formatarDataHora, formatarDuracao, formatarNumero } from '@/lib/relatorios-candidato'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import {
@@ -22,38 +21,16 @@ import {
   ArrowUp,
   ArrowDown,
   ChevronsUpDown,
+  ChevronRight,
 } from 'lucide-react'
 import Image from 'next/image'
 import Link from 'next/link'
 import SairButton from './sair-button'
 import Busca from './busca'
+import CardMetrica from './componentes/card-metrica'
+import BarraSerie from './componentes/barra-serie'
 
 export const dynamic = 'force-dynamic'
-
-const NOMES_SERIES = {
-  A: 'Percepção Visual',
-  B: 'Raciocínio Analógico',
-  C: 'Raciocínio de Padrões',
-  D: 'Raciocínio Quantitativo',
-  E: 'Raciocínio Abstrato',
-}
-
-const formatarDataHora = (iso) =>
-  new Date(iso).toLocaleString('pt-BR', {
-    timeZone: 'America/Sao_Paulo',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-
-const formatarDuracao = (segundos) => {
-  const h = Math.floor(segundos / 3600)
-  const m = Math.floor((segundos % 3600) / 60)
-  const s = segundos % 60
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-}
 
 async function carregarDados({ busca, ordenacao }) {
   const supabase = getSupabaseAdmin()
@@ -75,82 +52,6 @@ async function carregarDados({ busca, ordenacao }) {
     classificacao: classificacao.data ?? [],
     candidatos: candidatos.data ?? [],
   }
-}
-
-function CardMetrica({ icone: Icone, rotulo, valor, sufixo, cor }) {
-  return (
-    <Card className={`${cor.bg} ${cor.border}`}>
-      <CardContent className="p-4">
-        <div className="flex items-start gap-3">
-          <Icone className={`w-6 h-6 mt-1 ${cor.texto}`} />
-          <div>
-            <p className="text-sm text-gray-600">{rotulo}</p>
-            <p className="text-2xl font-semibold tabular-nums">
-              {valor}
-              {sufixo && <span className="text-base font-normal text-gray-500 ml-1">{sufixo}</span>}
-            </p>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function BarraSerie({ letra, acertos, percentual }) {
-  return (
-    <div>
-      <div className="flex justify-between items-baseline text-sm mb-1">
-        <span className="font-medium">
-          Série {letra}
-          <span className="text-gray-500 font-normal ml-2">{NOMES_SERIES[letra]}</span>
-        </span>
-        <span className="tabular-nums text-gray-600">
-          {acertos}/12 ({percentual}%)
-        </span>
-      </div>
-      <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-blue-600 to-cyan-500"
-          style={{ width: `${percentual}%` }}
-        />
-      </div>
-    </div>
-  )
-}
-
-function DetalheQuestoes({ letra, respostas }) {
-  const { inicio, fim } = series[letra]
-  const questoes = []
-
-  for (let numero = inicio; numero <= fim; numero++) {
-    const indice = numero - 1
-    const resposta = respostas[indice]
-    const correta = gabarito[indice]
-    questoes.push({ numero, resposta, correta, acertou: resposta === correta })
-  }
-
-  return (
-    <div className="grid grid-cols-6 gap-2">
-      {questoes.map((q) => (
-        <div
-          key={q.numero}
-          className={`rounded-md border p-2 text-center text-xs ${
-            q.acertou ? 'border-green-200 bg-green-50' : 'border-red-200 bg-red-50'
-          }`}
-          title={`Questão ${q.numero}: respondeu ${q.resposta}, correta ${q.correta}`}
-        >
-          <div className="text-gray-500">Q{q.numero}</div>
-          <div className={`font-semibold ${q.acertou ? 'text-green-700' : 'text-red-700'}`}>
-            {q.acertou ? '✓' : '✗'}
-          </div>
-          <div className="text-gray-600 tabular-nums">
-            {q.resposta}
-            {!q.acertou && <span className="text-gray-400"> / {q.correta}</span>}
-          </div>
-        </div>
-      ))}
-    </div>
-  )
 }
 
 function CabecalhoOrdenavel({ chave, className, busca, ordenacao }) {
@@ -181,7 +82,9 @@ function CabecalhoTabela({ busca, ordenacao }) {
   const props = { busca, ordenacao }
 
   return (
-    <div className="hidden sm:grid grid-cols-12 gap-3 items-center px-4 py-2 border-b bg-gray-50 text-xs uppercase tracking-wide">
+    // O pr-9 casa com o espaço que a seta ocupa no fim de cada linha; sem ele,
+    // cabeçalho e colunas ficam desalinhados por uns 20px.
+    <div className="hidden sm:grid grid-cols-12 gap-3 items-center pl-4 pr-9 py-2 border-b bg-gray-50 text-xs uppercase tracking-wide">
       <CabecalhoOrdenavel chave="nome" className="col-span-4" {...props} />
       <CabecalhoOrdenavel chave="data" className="col-span-2" {...props} />
       <CabecalhoOrdenavel chave="tempo" className="col-span-2" {...props} />
@@ -191,72 +94,50 @@ function CabecalhoTabela({ busca, ordenacao }) {
   )
 }
 
-function LinhaCandidato({ c }) {
-  const seriesDoCandidato = [
-    { letra: 'A', acertos: c.acertos_serie_a, percentual: c.percentual_serie_a },
-    { letra: 'B', acertos: c.acertos_serie_b, percentual: c.percentual_serie_b },
-    { letra: 'C', acertos: c.acertos_serie_c, percentual: c.percentual_serie_c },
-    { letra: 'D', acertos: c.acertos_serie_d, percentual: c.percentual_serie_d },
-    { letra: 'E', acertos: c.acertos_serie_e, percentual: c.percentual_serie_e },
-  ]
-
+// A linha leva para /relatorios/[id] em vez de abrir um acordeão aqui.
+//
+// Busca e ordenação viajam junto na URL para que o "voltar" da tela do
+// candidato devolva a lista exatamente como estava — é o que paga o custo de
+// ter saído da mesma página.
+function LinhaCandidato({ c, busca, ordenacao }) {
   return (
-    <details className="group border-b last:border-b-0">
-      <summary className="cursor-pointer list-none px-4 py-3 hover:bg-gray-50 transition-colors">
-        <div className="grid grid-cols-12 gap-3 items-center text-sm">
-          <div className="col-span-12 sm:col-span-4">
-            <div className="font-medium">{c.nome}</div>
-            <div className="text-gray-500 text-xs">{c.email}</div>
-          </div>
-          <div className="col-span-4 sm:col-span-2 text-gray-600 text-xs">
-            {formatarDataHora(c.data_fim)}
-          </div>
-          <div className="col-span-3 sm:col-span-2 tabular-nums text-gray-600">
-            {formatarDuracao(c.tempo_total_segundos)}
-          </div>
-          <div className="col-span-2 sm:col-span-1 tabular-nums font-semibold">
-            {c.pontuacao_total}/60
-          </div>
-          <div className="col-span-3 sm:col-span-3 text-xs">
-            <span className="tabular-nums font-medium mr-2">{c.percentual_acertos}%</span>
-            <span className="text-gray-600" title={c.classificacao_descricao}>
-              {c.classificacao}
-            </span>
-          </div>
+    <Link
+      href={construirHref({
+        busca,
+        ordem: ordenacao.ordem,
+        direcao: ordenacao.direcao,
+        base: `/relatorios/${c.id}`,
+      })}
+      className="relative block border-b last:border-b-0 pl-4 pr-9 py-3 hover:bg-gray-50 transition-colors"
+    >
+      <div className="grid grid-cols-12 gap-3 items-center text-sm">
+        <div className="col-span-12 sm:col-span-4">
+          <div className="font-medium">{c.nome}</div>
+          <div className="text-gray-500 text-xs">{c.email}</div>
         </div>
-      </summary>
-
-      <div className="px-4 pb-5 pt-1 bg-gray-50/60 space-y-5">
-        <p className="text-xs text-gray-600 border-l-2 border-gray-300 pl-3">
-          <span className="font-medium">{c.classificacao}</span> — {c.classificacao_descricao}
-        </p>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          {seriesDoCandidato.map((s) => (
-            <BarraSerie key={s.letra} {...s} />
-          ))}
+        <div className="col-span-4 sm:col-span-2 text-gray-600 text-xs">
+          {formatarDataHora(c.data_fim)}
         </div>
-
-        <div className="space-y-4">
-          {seriesDoCandidato.map((s) => (
-            <div key={s.letra}>
-              <p className="text-xs font-medium text-gray-700 mb-2">
-                Série {s.letra} — {NOMES_SERIES[s.letra]}
-                <span className="text-gray-500 font-normal"> · resposta / gabarito</span>
-              </p>
-              <DetalheQuestoes letra={s.letra} respostas={c.respostas} />
-            </div>
-          ))}
+        <div className="col-span-3 sm:col-span-2 tabular-nums text-gray-600">
+          {formatarDuracao(c.tempo_total_segundos)}
         </div>
-
-        {c.telefone && (
-          <p className="text-xs text-gray-500">
-            Telefone: <span className="tabular-nums">{c.telefone}</span> · Iniciado em{' '}
-            {formatarDataHora(c.data_inicio)}
-          </p>
-        )}
+        <div className="col-span-2 sm:col-span-1 tabular-nums font-semibold">
+          {c.pontuacao_total}/60
+        </div>
+        <div className="col-span-3 sm:col-span-3 text-xs">
+          <span className="tabular-nums font-medium mr-2">
+            {formatarNumero(c.percentual_acertos)}%
+          </span>
+          <span className="text-gray-600" title={c.classificacao_descricao}>
+            {c.classificacao}
+          </span>
+        </div>
       </div>
-    </details>
+      <ChevronRight
+        className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300"
+        aria-hidden="true"
+      />
+    </Link>
   )
 }
 
@@ -338,21 +219,21 @@ export default async function Relatorios({ searchParams }) {
                   <CardMetrica
                     icone={Clock}
                     rotulo="Tempo médio"
-                    valor={dados.resumo.tempo_medio_minutos}
+                    valor={formatarNumero(dados.resumo.tempo_medio_minutos)}
                     sufixo="min"
                     cor={{ bg: 'bg-purple-50', border: 'border-purple-200', texto: 'text-purple-600' }}
                   />
                   <CardMetrica
                     icone={Target}
                     rotulo="Pontuação média"
-                    valor={dados.resumo.pontuacao_media}
+                    valor={formatarNumero(dados.resumo.pontuacao_media)}
                     sufixo="/60"
                     cor={{ bg: 'bg-blue-50', border: 'border-blue-200', texto: 'text-blue-600' }}
                   />
                   <CardMetrica
                     icone={TrendingUp}
                     rotulo="Acerto médio"
-                    valor={dados.resumo.percentual_medio}
+                    valor={formatarNumero(dados.resumo.percentual_medio)}
                     sufixo="%"
                     cor={{ bg: 'bg-amber-50', border: 'border-amber-200', texto: 'text-amber-600' }}
                   />
@@ -393,7 +274,7 @@ export default async function Relatorios({ searchParams }) {
                           <div className="flex justify-between items-baseline text-sm mb-1">
                             <span title={faixa.classificacao_descricao}>{faixa.classificacao}</span>
                             <span className="tabular-nums text-gray-600">
-                              {faixa.total} ({faixa.percentual_do_total}%)
+                              {faixa.total} ({formatarNumero(faixa.percentual_do_total)}%)
                             </span>
                           </div>
                           <div className="h-2 w-full rounded-full bg-gray-200 overflow-hidden">
@@ -413,7 +294,7 @@ export default async function Relatorios({ searchParams }) {
                     <CardTitle className="text-base">
                       Candidatos
                       <span className="text-gray-500 font-normal text-sm ml-2">
-                        clique para ver o detalhe por série
+                        clique para abrir a ficha completa
                       </span>
                     </CardTitle>
                     <Busca
@@ -449,7 +330,7 @@ export default async function Relatorios({ searchParams }) {
                       <>
                         <CabecalhoTabela busca={busca} ordenacao={ordenacao} />
                         {dados.candidatos.map((c) => (
-                          <LinhaCandidato key={c.id} c={c} />
+                          <LinhaCandidato key={c.id} c={c} busca={busca} ordenacao={ordenacao} />
                         ))}
                       </>
                     )}

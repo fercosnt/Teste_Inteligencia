@@ -14,9 +14,9 @@ O resumo do que importa para continuar:
 | | |
 |---|---|
 | `main` | `80fe0b6`, tudo publicado |
-| Testes | 86, `npm test` |
+| Testes | 133, `npm test` |
 | Gabarito | conferido 60/60 contra o PDF oficial; vive em [lib/gabarito-servidor.js](../lib/gabarito-servidor.js) atrás de `server-only` |
-| Dashboard | [app/relatorios/page.js](../app/relatorios/page.js) — lista + acordeão inline |
+| Dashboard | [app/relatorios/page.js](../app/relatorios/page.js) — lista; ficha em [app/relatorios/[id]/page.js](../app/relatorios/[id]/page.js) |
 | Escala | normativa do SPM, por acertos, em `raven_classificacao()` no banco |
 | Material do teste | `material-teste/` — **fora do git**, só existe nesta máquina |
 | Imagens das questões | 60/60 conferidas à mão contra o PDF em 2026-07-26, sem divergência |
@@ -71,70 +71,94 @@ dependendo do caso — as duas já foram feitas e ficaram registradas no commit 
 
 ---
 
-## Frente B — visão do candidato no dashboard
+## Frente B — visão do candidato no dashboard ✅ CONCLUÍDA em 2026-07-26
 
-**O que se quer**: hoje clicar num candidato abre um acordeão na mesma página. Passar isso
-para uma tela dedicada, com mais dados do teste e visualização melhor — percentual e número de
-acertos por série, tempo, e uma leitura geral mais clara.
+Clicar num candidato abre `/relatorios/[id]`: uma ficha própria com comparação contra a média
+da base, a régua normativa inteira e a grade questão a questão. O acordeão saiu.
 
-### Decisões para tomar no começo da sessão
+### As três decisões, e o que foi feito com elas
 
-**1. Página dedicada, modal, ou os dois?**
+**1. Rota dedicada `/relatorios/[id]`** — nem modal nem interceptação.
+O link é compartilhável e imprimível, e a página inteira é Server Component (173 B de JS no
+cliente). O custo previsto era perder o contexto da lista; ficou pago porque busca e ordenação
+viajam na URL (`construirHref` com `base`), então o "Voltar para a lista" devolve a lista com o
+mesmo filtro e a mesma ordem.
 
-| Opção | A favor | Contra |
-|---|---|---|
-| Rota `/relatorios/[id]` | Link direto, dá para imprimir/salvar PDF, server component simples | Perde o contexto da lista ao navegar |
-| Modal sobre a lista | Mantém o contexto, volta rápido | Não é linkável nem imprimível |
-| Rota + interceptação | Modal ao clicar na lista, página cheia no link direto | Mais peça móvel (parallel/intercepting routes do Next) |
+**2. Comparação contra a média da base**, não a média do próprio candidato por questão.
+Aparece em três lugares: tempo total contra `tempo_medio_minutos`, pontuação contra
+`pontuacao_media`, e cada série contra `media_serie_*` — nesta última como um risco escuro
+desenhado na própria barra, além do número.
 
-*Minha inclinação*: rota dedicada. O RH avalia um candidato por vez e vai querer imprimir ou
-mandar o link para alguém. A interceptação é elegante, mas é complexidade que só se paga se o
-vai-e-volta na lista incomodar de verdade.
+Duas decisões de honestidade que vieram junto:
+- diferenças abaixo de 5% no tempo (ou de meio acerto na pontuação) são escritas como
+  "na média". Com base pequena, "2% mais lento" é ruído com cara de resultado.
+- com um único candidato na base, o bloco de comparação some. Comparar alguém com uma média
+  da qual ele é o único termo sugere uma referência que não existe.
 
-**2. Contra o que comparar o candidato?**
+**3. Régua inteira, com a faixa dele destacada.**
+As sete faixas, cada uma com a largura do seu intervalo real — "Muito inferior" cobre 20 dos 61
+acertos possíveis e "Muito superior" cobre 3, e desenhá-las iguais mentiria sobre a distância
+entre elas. Abaixo, quantos acertos faltaram para a faixa de cima.
 
-"Tempo médio" pode significar duas coisas. Vale decidir antes de desenhar:
-- o tempo médio **deste candidato** por questão (total ÷ 60), ou
-- a **média de todos os candidatos**, para dizer se este foi mais rápido ou mais lento
+Os cortes **não** foram copiados para o JavaScript. A view `raven_escala_classificacao` percorre
+as 61 pontuações possíveis, chama `raven_classificacao()` em cada uma e agrupa — os limites saem
+do `min`/`max` de cada grupo. Mudar a função no banco reescreve a régua sozinho.
 
-A segunda é mais útil para decisão de contratação, e o dashboard já calcula os agregados em
-`raven_dashboard_resumo`. Comparar acertos por série contra a média da base também cabe aqui.
+**Tempo por questão/série: fora do escopo**, por decisão. Nada foi instrumentado, e a tela não
+promete esse dado. Se um dia entrar, o caminho continua sendo o de sempre: gravar o instante de
+cada resposta na tela da questão, carregar no payload de `POST /api/resultados` e criar a coluna.
+Vale lembrar que isso só serve para testes feitos **depois** da mudança — os já aplicados nunca
+terão esse dado.
 
-**3. O que fazer com a classificação normativa nesta tela**
+### O que foi construído
 
-Ela existe e é por acertos. Vale mostrar onde o candidato cai na régua inteira (as sete faixas,
-com a dele destacada), em vez de só o rótulo — dá noção de distância para a faixa vizinha.
+| | |
+|---|---|
+| Rota | [app/relatorios/[id]/page.js](../app/relatorios/[id]/page.js) + `not-found.js` |
+| Componentes | [app/relatorios/componentes/](../app/relatorios/componentes/) — `barra-serie`, `detalhe-questoes`, `card-metrica`, `regua-classificacao` |
+| Lógica pura | [lib/relatorios-candidato.js](../lib/relatorios-candidato.js) — comparações, régua, formatação |
+| Banco | view `raven_escala_classificacao` (só `service_role`, como as outras) |
+| Testes | 133 no total (eram 86) |
 
-### Uma limitação que precisa ser dita antes de desenhar
+**A ficha é Server Component de ponta a ponta e precisa continuar sendo** — `DetalheQuestoes`
+compara com `lib/gabarito-servidor.js`, que está atrás de `server-only`. Marcar qualquer arquivo
+dessa árvore com `'use client'` quebra o build, e a quebra é a proteção funcionando.
 
-**Não existe tempo por questão nem por série.** O banco guarda `data_inicio`, `data_fim` e o
-array de respostas — nada mais. `tempo_total_segundos` é a diferença entre as duas datas.
+<details>
+<summary>Coisas que só apareceram rodando, e que valem para a próxima fatia</summary>
 
-Então "tempo por série" **não é possível hoje**. Para ter isso seria preciso:
-1. a tela da questão gravar o instante de cada resposta (hoje o `localStorage` só guarda o array),
-2. o payload de `POST /api/resultados` carregar esses instantes,
-3. uma coluna nova em `raven_resultados`.
+**A régua com opacidade não funcionava no pé da escala.** A primeira versão esmaecia as faixas
+não-atuais. No topo ficava ótimo; embaixo, onde a faixa do candidato é a mais clara da rampa,
+esmaecer as vizinhas não destacava nada — o candidato de 12 acertos não conseguia se achar na
+própria régua. Trocado por um colchete escuro contornando o segmento, que funciona nas sete.
+Só apareceu olhando o print dos dois extremos, não do caso do meio.
 
-É uma fatia própria, e só vale a pena se o RH for de fato usar essa informação. **Decidir se
-entra no escopo antes de desenhar a tela** — muda o que a tela pode prometer.
+**Ponto e vírgula decimal na mesma tela.** O Postgres devolve `numeric` como `78.33` e o React
+imprime o ponto; do lado, `média da base 31,2` saía com vírgula pelo `toLocaleString`. Duas
+convenções decimais a 3cm uma da outra parecem erro de dado, não de formatação. Resolvido com
+`formatarNumero`, que também devolve travessão para valor ausente — `Number(null)` é `0`, e um
+percentual faltando virando "0%" lê como "errou tudo".
 
-### O que já existe e dá para reaproveitar
+**Dois testes de banco não podiam rodar em paralelo.** `tests/db/busca.test.js` e o novo
+`tests/db/escala.test.js` tratam o domínio `@teste-automatizado.invalid` como sandbox exclusiva
+e apagam o domínio inteiro ao começar. Em paralelo, um limpava as linhas do outro. Resolvido com
+`fileParallelism: false` no Vitest, preservando a limpeza total — que é a propriedade que impede
+sobra de dado pessoal falso no banco.
 
-- `raven_resultados_detalhe` já traz acertos e percentual por série, classificação, descrição da
-  faixa e o array de respostas
-- `raven_detalhe_serie()` monta o bloco de texto por série (respostas vs gabarito com ✓/✗)
-- `DetalheQuestoes` e `BarraSerie` em [app/relatorios/page.js](../app/relatorios/page.js) já
-  desenham a grade questão a questão e as barras por série — dá para extrair para componentes
-- o middleware já protege `/relatorios/:path*`, então uma rota filha nasce protegida
+**O Vitest não lia JSX em arquivo `.js`.** Convenção do Next, que compila esses arquivos sabendo
+disso; o Vite decide pela extensão e via o primeiro `<div>` como erro de sintaxe. Não dá para
+resolver com opção global (`oxc.lang`), que valeria também para os `.tsx` de `components/ui` e
+quebraria a sintaxe de tipos. Tem um plugin de seis linhas em `vitest.config.js` para isso.
 
-### Ordem sugerida
+**A trava do `server-only` disparou durante a verificação**, ao tentar semear dados com um script
+node que importava `lib/gabarito-servidor.js`. Funcionou como devia. O jeito certo de semear é
+pedir o gabarito ao servidor — `supabase.rpc('raven_gabarito')` — em vez de afrouxar a trava.
 
-1. Decidir os três pontos acima
-2. Extrair `BarraSerie` e `DetalheQuestoes` para `app/relatorios/componentes/`
-3. Criar `/relatorios/[id]` lendo `raven_resultados_detalhe` por id
-4. Trocar o acordeão por link na lista
-5. Enriquecer: comparação com a média, régua das faixas, tempo
-6. Testes: rota sem cookie redireciona; id inexistente dá 404; números batem com a view
+**Cuidado ao verificar contra o runtime**: subir um segundo `npm start` sem matar o primeiro
+deixa o servidor velho no ar servindo um `.next` que já foi sobrescrito. O sintoma é a página vir
+sem CSS nenhum e com classes de uma versão anterior — o que parece bug da mudança e não é.
+
+</details>
 
 ---
 
